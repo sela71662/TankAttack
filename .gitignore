@@ -1,0 +1,67 @@
+# =========================================================================
+# Unity 생성 임시/캐시 파일 (절대 Git에 올리면 안 됨)
+# =========================================================================
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+
+# Asset Store 패키지 캐시
+/[Aa]ssets/[Aa]ssets-[Nn]et/
+
+# Unity Cloud Build 생성 파일
+/[Aa]ssets/Plugins/Editor/JetBrains*
+
+# =========================================================================
+# IDE 및 에디터 관련 파일 (개인 설정 파일)
+# =========================================================================
+# Visual Studio
+.vs/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# Visual Studio Code
+.vscode/
+
+# macOS 관련 파일
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =========================================================================
+# 빌드 출력 파일 및 패키지
+# =========================================================================
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# =========================================================================
+# Crashlytics 및 기타 보고서
+# =========================================================================
+sysinfo.txt
+
+# Target build folders
+/[Bb]uilds/
+/[LlL]og/
+
+# Addressables / AssetBundles 빌드 데이터 (필요 시 포함 여부 조정)
+/[Aa]ssets/[Ss]treamingAssets/aa/*
