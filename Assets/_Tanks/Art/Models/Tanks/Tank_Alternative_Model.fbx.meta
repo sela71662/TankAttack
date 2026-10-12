@@ -1,14 +1,37 @@
 fileFormatVersion: 2
 guid: 06cdc8d71bc5371408b340eb71884fd3
+AssetOrigin:
+  serializedVersion: 1
+  productId: 46209
+  packageName: Tanks! | 3D Sample Project
+  packageVersion: 4.1
+  assetPath: Assets/_Tanks/Art/Models/Tanks/Tank_Alternative_Model.fbx
+  uploadId: 1012748
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24501
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TankColor
+    second: {fileID: 2100000, guid: 851d9aa040b19f148b1b5613067a59e4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TankGrey
+    second: {fileID: 2100000, guid: 4c4d5ea96e1d2774ab94d360ebce615c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TankLights
+    second: {fileID: 2100000, guid: 2d859a2108cc5fe47affecccf3e51348, type: 2}
   materials:
     materialImportMode: 1
-    materialName: 0
+    materialName: 1
     materialSearch: 2
     materialLocation: 1
+    searchTexturesGlobally: 1
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
@@ -56,6 +79,11 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
     meshOptimizationFlags: -1
     indexFormat: 1
     secondaryUVAngleDistortion: 8
@@ -75,6 +103,7 @@ ModelImporter:
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 1
   referencedClips: []
   importAnimation: 0
   humanDescription:
@@ -105,10 +134,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 46209
-  packageName: Tanks! | 3D Sample Project
-  packageVersion: 4.1
-  assetPath: Assets/_Tanks/Art/Models/Tanks/Tank_Alternative_Model.fbx
-  uploadId: 1012748

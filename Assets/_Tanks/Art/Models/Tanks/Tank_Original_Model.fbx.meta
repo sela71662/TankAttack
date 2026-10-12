@@ -1,7 +1,14 @@
 fileFormatVersion: 2
 guid: 002e2a607f5b64c48be0b3b0d8b8bfdd
+AssetOrigin:
+  serializedVersion: 1
+  productId: 46209
+  packageName: Tanks! | 3D Sample Project
+  packageVersion: 4.1
+  assetPath: Assets/_Tanks/Art/Models/Tanks/Tank_Original_Model.fbx
+  uploadId: 1012748
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24501
   internalIDToNameTable:
   - first:
       1: 100000
@@ -438,12 +445,28 @@ ModelImporter:
   - first:
       137: 13700002
     second: TankTracksRight
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TankColor
+    second: {fileID: 2100000, guid: f255ee10da0b2734f9da0031d0311bb0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TankGrey
+    second: {fileID: 2100000, guid: 77d99023149ceac40ac9d775dd6ca6cb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TankLights
+    second: {fileID: 2100000, guid: 6da9f9ed538c97743afd8ffc62a6bc0a, type: 2}
   materials:
     materialImportMode: 1
-    materialName: 0
+    materialName: 1
     materialSearch: 2
     materialLocation: 1
+    searchTexturesGlobally: 1
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
@@ -797,6 +820,11 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
     meshOptimizationFlags: -1
     indexFormat: 1
     secondaryUVAngleDistortion: 8
@@ -816,6 +844,7 @@ ModelImporter:
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 1
   referencedClips: []
   importAnimation: 0
   humanDescription:
@@ -846,10 +875,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 46209
-  packageName: Tanks! | 3D Sample Project
-  packageVersion: 4.1
-  assetPath: Assets/_Tanks/Art/Models/Tanks/Tank_Original_Model.fbx
-  uploadId: 1012748

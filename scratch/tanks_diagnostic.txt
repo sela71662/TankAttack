@@ -1,0 +1,194 @@
+=== TANKS GRAPHICS DIAGNOSTIC REPORT ===
+Render Pipeline: Built-in Render Pipeline
+
+--- MATERIALS (141 found) ---
+[OK] Assets/_Tanks/Art/Fonts/Big_Shoulders_Stencil/BigShouldersStencil SDF.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Big_Shoulders_Stencil/BigShouldersStencil.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Fonts/Bowlby_One/BowlbyOne-Regular.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Fonts/Bowlby_One/BowlbyOne_Regular.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Bowlby_One/BowlbyOne_Underlay.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Bowlby_One/BowlbyOne_Underlay_Outline.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Exo_2/Exo2 SDF.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Exo_2/Exo2.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Fonts/IBM_Plex_Mono/IBMPlexMono-Regular SDF.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Fonts/Inter/Inter SDF.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Inter/Inter_18pt-Regular.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Fonts/Lora/Lora-Bold SDF.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Lora/Lora-Bold.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Fonts/Ubuntu/Ubuntu-Regular SDF.asset | Shader: TextMeshPro/Distance Field
+[OK] Assets/_Tanks/Art/Fonts/Ubuntu/Ubuntu-Regular.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Art/Materials/Environment/Blue.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Brown.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Building.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Building_2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingGlass.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingGrayGreen.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingGrayGreen_2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingGrey.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingMetal.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingStone.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/BuildingWhite.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/DarkShine.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Flower.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Gold.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Grassy.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Gray.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Green.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Green_2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Green_3.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Green_4.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/GreenDoors.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/GreenGround.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/GreenLight.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Hippo.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Jungle_Rock.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/JungleMud.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/JungleMud_2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/MoonCliffs.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/MoonCrator.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/MoonGround.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/MoonPattern.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/MoonRock.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/No Name.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/OilDrums.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/OilDrums_2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/OilDrums_3.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Pink.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Red.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/RockBrown.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/RockStoneBeige.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/SandPattern.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/SandRock.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/Water.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/WaterJungle.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/White.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/YellowBright.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/YellowDark.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/YellowLight.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Environment/YellowMid.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Particles/Particle_Dust_Grass.mat | Shader: Legacy Shaders/Particles/Additive
+[OK] Assets/_Tanks/Art/Materials/Particles/Particle_Dust_Moon.mat | Shader: Legacy Shaders/Particles/Additive
+[OK] Assets/_Tanks/Art/Materials/Particles/Particle_Dust_Sand.mat | Shader: Legacy Shaders/Particles/Additive
+[OK] Assets/_Tanks/Art/Materials/Particles/Particle_Explosion.mat | Shader: Legacy Shaders/Particles/Additive
+[OK] Assets/_Tanks/Art/Materials/Particles/Particle_Explosion_Gray.mat | Shader: Legacy Shaders/Particles/Additive
+[OK] Assets/_Tanks/Art/Materials/Particles/Particle_Smoke.mat | Shader: Legacy Shaders/Particles/Additive
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Cone.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_ConeGrey.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Diamond.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Green.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Health.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Lighting.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Red.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_SheildLight.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Shield.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/PowerUps/Powerup_Star.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Tank/TankColor.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Tank/TankGrey.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Tank/TankLights.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Tank/TankRed.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/Tank/TankWindow.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Building01.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Bush 01.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Bush 02.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Bush 03.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Bush 04.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/BustedTank.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Cactus.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Cliff.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Column01.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Column02.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Concrete.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Cow.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Crater01.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Crater02.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/CratorRocket.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Dunes01.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Dunes02.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Helipad.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/MoonBuilding01.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/MoonBuilding02.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Oasis.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/OilStorage.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/PalmTree.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/PalmTree01.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/PalmTree02.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/PalmTree03.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/PumpJack.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/RadarSphere.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Refinery.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Rocks01.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Rocks02.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Rocks03.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Ruins01.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Terrain.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Environment/Tree.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Miscellaneous/Shell.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_Crawler_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_Droid_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_Light_Model.fbx | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_Monster_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_RocketShip_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_Shark_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_Spike_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Art/Models/Tanks/Tank_UTV_Model.FBX | Shader: Standard
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Fonts/LiberationSans.ttf | Shader: GUI/Text Shader
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Drop Shadow.mat | Shader: TextMeshPro/Mobile/Distance Field
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset | Shader: TextMeshPro/Mobile/Distance Field
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Outline.mat | Shader: TextMeshPro/Mobile/Distance Field
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset | Shader: TextMeshPro/Mobile/Distance Field
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Resources/Sprite Assets/MixedIndexTest.asset | Shader: TextMeshPro/Sprite
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Shaders/TMP_SDF-HDRP LIT.shadergraph | Shader: TextMeshPro/SRP/TMP_SDF-HDRP LIT
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Shaders/TMP_SDF-HDRP UNLIT.shadergraph | Shader: TextMeshPro/SRP/TMP_SDF-HDRP UNLIT
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Shaders/TMP_SDF-URP Lit.shadergraph | Shader: TextMeshPro/SRP/TMP_SDF-URP Lit
+[OK] Assets/_Tanks/Settings/TextMesh Pro/Shaders/TMP_SDF-URP Unlit.shadergraph | Shader: TextMeshPro/SRP/TMP_SDF-URP Unlit
+[OK] Assets/_Tanks/Tutorial_Demo/Demo_Materials/Demo_Explosion_Brown.mat | Shader: Universal Render Pipeline/Particles/Simple Lit
+Total broken materials: 0 / 141
+
+--- TEXTURES (62 found) ---
+Assets/_Tanks/Art/Sprites/Aim Arrow.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/Aim Arrow_Green.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/Aim Arrow_Purple.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/Aim Arrow_Red.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/Arrow.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/Health Wheel.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/Smoke.tif | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/UI/UI_Circle_Bevel_Base.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/UI/UI_Circle_Faded.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/UI/UI_Icon_Jump.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/UI/UI_Icon_Look.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/UI/UI_Icon_Move.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Sprites/UI/UI_Icon_Sprint.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/Gradient Grey.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/Gradient.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/GrassTile.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/JungleMud.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/Moon Crator.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/MoonPattern.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/rock 02.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/rock Jungle.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/rock Moon.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/SandPattern.png | Type: Default | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/Background.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/HeaderBig.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/HeaderBigDeactivated.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/HeaderMed.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/HeaderSmall.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/Highlight.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/Highlight_Select.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Art/Textures/UI/StartButton.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Settings/TextMesh Pro/Resources/Sprite Assets/InlineIcons.png | Type: Sprite | Format: 0 | sRGB: True
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-0_comp_dir.png | Type: DirectionalLightmap | Format: 0 | sRGB: False
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-0_comp_light.exr | Type: Lightmap | Format: 0 | sRGB: True
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-1_comp_dir.png | Type: DirectionalLightmap | Format: 0 | sRGB: False
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-1_comp_light.exr | Type: Lightmap | Format: 0 | sRGB: True
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-2_comp_dir.png | Type: DirectionalLightmap | Format: 0 | sRGB: False
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-2_comp_light.exr | Type: Lightmap | Format: 0 | sRGB: True
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-3_comp_dir.png | Type: DirectionalLightmap | Format: 0 | sRGB: False
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-3_comp_light.exr | Type: Lightmap | Format: 0 | sRGB: True
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-4_comp_dir.png | Type: DirectionalLightmap | Format: 0 | sRGB: False
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-4_comp_light.exr | Type: Lightmap | Format: 0 | sRGB: True
+Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/ReflectionProbe-0.exr | Type: Default | Format: 0 | sRGB: True
+
+--- PREFABS (164 found) ---
+Total prefab material issues: 0
