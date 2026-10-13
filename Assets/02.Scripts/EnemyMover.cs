@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -13,10 +14,13 @@ public class EnemyMover : MonoBehaviour
     public float aggroRadius = 35.0f; // 섬 안에서 이 거리 안의 아군 탱크를 우선 추격한다
     public float turnSpeed = 120.0f;  // 도/초
     public float followGap = 4.5f;    // 앞 탱크와 이 거리(탱크 크기 배율 적용) 안이면 멈춘다
+    public float cornerCut = 12.0f;   // 도로 코너를 둥글게 깎을 최대 길이(m). 클수록 완만하게 돈다
+    public float routeTurnSpeed = 240.0f; // 경로를 따라갈 때 차체 회전 속도(도/초). 곡선을 놓치지 않을 만큼 빠르게
 
     NavMeshAgent agent;
     TankInfo info;
     TeamMember me;
+    List<Vector3> path;               // 웨이포인트를 곡선으로 다듬은 실제 주행 경로
     int routeIndex;
     float nextRetargetTime;
 
@@ -28,7 +32,9 @@ public class EnemyMover : MonoBehaviour
 
     void Update()
     {
-        if (route != null && routeIndex < route.Length)
+        if (path == null && route != null && route.Length > 0) BuildPath();
+
+        if (path != null && routeIndex < path.Count)
         {
             FollowRoute();
             return;
@@ -41,9 +47,51 @@ public class EnemyMover : MonoBehaviour
         MoveFreely();
     }
 
+    // 현재 위치에서 시작해 웨이포인트를 지나는 경로를 만들고, 코너를 둥글게 깎는다
+    void BuildPath()
+    {
+        var pts = new List<Vector3> { transform.position };
+        foreach (var w in route) pts.Add(w.position);
+        path = SmoothPath(pts, cornerCut, 10);
+    }
+
+    // 꺾이는 점마다 앞뒤로 cut 만큼 떨어진 두 점 사이를 2차 베지어 곡선(꺾이는 점이 제어점)으로 잇는다.
+    // cut은 이웃 구간 길이의 절반을 넘지 않으므로, 구간이 짧은 다리 입구 같은 곳에서는 경로에서 많이 벗어나지 않는다
+    public static List<Vector3> SmoothPath(IList<Vector3> pts, float cut, int samples)
+    {
+        var result = new List<Vector3>();
+        if (pts.Count < 3) { result.AddRange(pts); return result; }
+
+        result.Add(pts[0]);
+        for (int i = 1; i < pts.Count - 1; i++)
+        {
+            Vector3 p = pts[i];
+            Vector3 inDir = p - pts[i - 1];
+            Vector3 outDir = pts[i + 1] - p;
+            float inLen = inDir.magnitude, outLen = outDir.magnitude;
+            if (inLen < 0.01f || outLen < 0.01f) continue;
+            inDir /= inLen; outDir /= outLen;
+
+            // 거의 직선이면 그대로 둔다
+            if (Vector3.Angle(inDir, outDir) < 3.0f) { result.Add(p); continue; }
+
+            float c = Mathf.Min(cut, inLen * 0.5f, outLen * 0.5f);
+            Vector3 a = p - inDir * c;
+            Vector3 b = p + outDir * c;
+            for (int s = 0; s <= samples; s++)
+            {
+                float t = s / (float)samples;
+                // 2차 베지어: (1-t)^2 a + 2(1-t)t p + t^2 b
+                result.Add((1 - t) * (1 - t) * a + 2 * (1 - t) * t * p + t * t * b);
+            }
+        }
+        result.Add(pts[pts.Count - 1]);
+        return result;
+    }
+
     void FollowRoute()
     {
-        Vector3 target = route[routeIndex].position;
+        Vector3 target = path[routeIndex];
         Vector3 to = target - transform.position;
         float step = info.moveSpeed * speedScale * Time.deltaTime;
 
@@ -62,7 +110,7 @@ public class EnemyMover : MonoBehaviour
 
         Vector3 flat = new Vector3(to.x, 0, to.z);
         if (flat.sqrMagnitude > 0.01f)
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat), turnSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat), routeTurnSpeed * Time.deltaTime);
     }
 
     // 진행 방향 앞쪽(약 60도 안)에 다른 탱크가 gap 거리 안에 있으면 막힌 것으로 본다.
@@ -93,7 +141,7 @@ public class EnemyMover : MonoBehaviour
     // 섬에 도착: 가장 가까운 NavMesh 위로 옮기고 에이전트를 만든다
     bool BeginFreeMove()
     {
-        if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 20.0f, NavMesh.AllAreas))
+        if (!NavUtil.SampleNearest(transform.position, 20.0f, out NavMeshHit hit))
         {
             Debug.LogWarning($"{name}: 섬 입구 근처에 NavMesh가 없다", this);
             enabled = false;
@@ -124,7 +172,7 @@ public class EnemyMover : MonoBehaviour
 
         agent.stoppingDistance = info.stopDistance;
         // 목표가 NavMesh 밖(건물 안쪽 등)이어도 가장 가까운 이동 가능 지점으로 보낸다
-        if (NavMesh.SamplePosition(target.position, out NavMeshHit hit, 15.0f, NavMesh.AllAreas))
+        if (NavUtil.SampleNearest(target.position, 15.0f, out NavMeshHit hit))
             agent.SetDestination(hit.position);
     }
 

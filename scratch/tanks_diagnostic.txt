@@ -1,7 +1,7 @@
 === TANKS GRAPHICS DIAGNOSTIC REPORT ===
 Render Pipeline: Built-in Render Pipeline
 
---- MATERIALS (140 found) ---
+--- MATERIALS (158 found) ---
 [OK] Assets/_Tanks/Art/Fonts/Big_Shoulders_Stencil/BigShouldersStencil SDF.asset | Shader: TextMeshPro/Distance Field
 [OK] Assets/_Tanks/Art/Fonts/Big_Shoulders_Stencil/BigShouldersStencil.ttf | Shader: GUI/Text Shader
 [OK] Assets/_Tanks/Art/Fonts/Bowlby_One/BowlbyOne-Regular.ttf | Shader: GUI/Text Shader
@@ -88,6 +88,24 @@ Render Pipeline: Built-in Render Pipeline
 [OK] Assets/_Tanks/Art/Materials/Tank/TankLights.mat | Shader: Standard
 [OK] Assets/_Tanks/Art/Materials/Tank/TankRed.mat | Shader: Standard
 [OK] Assets/_Tanks/Art/Materials/Tank/TankWindow.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankColor 1.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankColor 2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankColor 3.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankColor 4.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankColor 5.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankColor.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankGrey 1.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankGrey 2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankGrey 3.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankGrey 4.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankGrey 5.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankGrey.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankLights 1.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankLights 2.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankLights 3.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankLights 4.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankLights.mat | Shader: Standard
+[OK] Assets/_Tanks/Art/Materials/TankPack/TankWindow.mat | Shader: Standard
 [OK] Assets/_Tanks/Art/Models/Environment/Building01.fbx | Shader: Standard
 [OK] Assets/_Tanks/Art/Models/Environment/Bush 01.FBX | Shader: Standard
 [OK] Assets/_Tanks/Art/Models/Environment/Bush 02.FBX | Shader: Standard
@@ -142,7 +160,7 @@ Render Pipeline: Built-in Render Pipeline
 [OK] Assets/_Tanks/Settings/TextMesh Pro/Shaders/TMP_SDF-URP Lit.shadergraph | Shader: TextMeshPro/SRP/TMP_SDF-URP Lit
 [OK] Assets/_Tanks/Settings/TextMesh Pro/Shaders/TMP_SDF-URP Unlit.shadergraph | Shader: TextMeshPro/SRP/TMP_SDF-URP Unlit
 [OK] Assets/_Tanks/Tutorial_Demo/Demo_Materials/Demo_Explosion_Brown.mat | Shader: Universal Render Pipeline/Particles/Simple Lit
-Total broken materials: 0 / 140
+Total broken materials: 0 / 158
 
 --- TEXTURES (62 found) ---
 Assets/_Tanks/Art/Sprites/Aim Arrow.png | Type: Sprite | Format: 0 | sRGB: True
@@ -189,5 +207,5 @@ Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightm
 Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/Lightmap-4_comp_light.exr | Type: Lightmap | Format: 0 | sRGB: True
 Assets/_Tanks/Tutorial_Demo/Demo_Scenes/Demo_Scene_Data/Demo_LightingData/ReflectionProbe-0.exr | Type: Default | Format: 0 | sRGB: True
 
---- PREFABS (160 found) ---
+--- PREFABS (161 found) ---
 Total prefab material issues: 0

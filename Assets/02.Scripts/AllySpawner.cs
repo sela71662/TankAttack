@@ -6,13 +6,14 @@ public class AllySpawner : MonoBehaviour
 {
     public Transform spawnPoint;
     public Transform home;                // 방어 중심 (코어)
-    public Transform[] heavyPosts;        // Heavy가 멈춰 설 지점 (각 다리 앞). 순서대로 배정한다
+    public Transform[] heavyPosts;        // 각 다리 섬쪽 입구. Heavy는 여기서 멈춰 서고, 나머지는 여기를 지키며 적을 기다린다
     public GameObject[] allyPrefabs;      // TankInfo.kind로 종류를 구분한다
     public TankKind[] startingAllies;     // 시작할 때 자동으로 스폰할 아군
     public float startDelay = 1.0f;
     public float staggerDelay = 1.5f;     // 연속 스폰 간격
 
-    int nextPost;
+    int nextHeavyPost;
+    int nextGuardPost;
 
     public static Team AllyTeam => TeamConfig.playerTeam;
 
@@ -62,8 +63,12 @@ public class AllySpawner : MonoBehaviour
 
         var mover = go.AddComponent<AllyMover>();
         mover.home = home;
-        if (kind == TankKind.Heavy && heavyPosts != null && heavyPosts.Length > 0)
-            mover.post = heavyPosts[nextPost++ % heavyPosts.Length];
+        if (heavyPosts != null && heavyPosts.Length > 0)
+        {
+            // Heavy는 다리 앞에 서서 움직이지 않고, 나머지는 다리를 번갈아 맡아 지킨다 (적이 오는 쪽을 고르게 막는다)
+            if (kind == TankKind.Heavy) mover.post = heavyPosts[nextHeavyPost++ % heavyPosts.Length];
+            else mover.guardPost = heavyPosts[nextGuardPost++ % heavyPosts.Length];
+        }
         return go;
     }
 

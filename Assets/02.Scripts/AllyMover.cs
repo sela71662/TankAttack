@@ -8,9 +8,11 @@ using UnityEngine.AI;
 public class AllyMover : MonoBehaviour
 {
     public Transform home;             // 방어 중심 (코어)
-    public Transform post;             // 지정 시 이 지점에서 정지
+    public Transform post;             // 지정 시 이 지점에서 정지 (Heavy)
+    public Transform guardPost;        // 지정 시 이 다리 앞에서 대기하다가 적이 보이면 교전한다
+    public float guardRadius = 7.0f;   // 다리 앞에서 흩어져 서 있을 반경
     public float leashRadius = 80.0f;  // 중심에서 이 거리 밖으로는 가지 않는다
-    public float roamRadius = 40.0f;   // 배회할 반경
+    public float roamRadius = 40.0f;   // 배회할 반경 (guardPost가 없을 때)
     public float detectRadius = 70.0f; // 이 안의 적 탱크를 발견한다
     public float speedScale = 1.0f;
 
@@ -29,7 +31,7 @@ public class AllyMover : MonoBehaviour
         if (info.flying) return;
 
         // NavMesh 위로 위치를 맞춘 뒤 에이전트를 만든다
-        if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 15.0f, NavMesh.AllAreas))
+        if (NavUtil.SampleNearest(transform.position, 15.0f, out NavMeshHit hit))
             transform.position = hit.position;
 
         agent = gameObject.AddComponent<NavMeshAgent>();
@@ -69,7 +71,8 @@ public class AllyMover : MonoBehaviour
             return;
         }
 
-        // 적이 없으면 방어 범위 안을 돌아다닌다. 도착하면 잠시 쉬었다가 다음 지점을 고른다
+        // 적이 없으면 다리 앞(guardPost)으로 가서 대기한다. 도착하면 잠시 쉬었다가 근처의 다른 지점으로 자리를 옮긴다.
+        // guardPost가 없으면 방어 범위 안을 돌아다닌다
         agent.stoppingDistance = 1.0f;
         bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 1.0f;
         if (wasMoving && arrived)
@@ -79,8 +82,10 @@ public class AllyMover : MonoBehaviour
         }
         if (!wasMoving && Time.time >= idleUntil)
         {
-            Vector2 r = Random.insideUnitCircle * roamRadius;
-            GoTo(Leash(HomePos + new Vector3(r.x, 0, r.y)));
+            Vector3 center = guardPost != null ? guardPost.position : HomePos;
+            float radius = guardPost != null ? guardRadius : roamRadius;
+            Vector2 r = Random.insideUnitCircle * radius;
+            GoTo(Leash(center + new Vector3(r.x, 0, r.y)));
             wasMoving = true;
         }
     }
@@ -96,7 +101,7 @@ public class AllyMover : MonoBehaviour
     void GoTo(Vector3 pos)
     {
         // 건물 안쪽이나 NavMesh 밖이면 가장 가까운 이동 가능 지점으로 보낸다
-        if (NavMesh.SamplePosition(pos, out NavMeshHit hit, 20.0f, NavMesh.AllAreas))
+        if (NavUtil.SampleNearest(pos, 20.0f, out NavMeshHit hit))
             agent.SetDestination(hit.position);
     }
 

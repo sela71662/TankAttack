@@ -152,8 +152,9 @@ public class WaveManager : MonoBehaviour
     public void FillDefaultWaves()
     {
         waves.Clear();
+        // W1: 한쪽 게이트(A)에서만 Original 2대
         waves.Add(MakeWave("기초 방어", 1f, 1f,
-            new Entry(TankKind.Original, 2, 2)));
+            new Entry(TankKind.Original, 2, 0)));
         waves.Add(MakeWave("기초 방어", 1f, 1f,
             new Entry(TankKind.Original, 3, 3)));
         waves.Add(MakeWave("다방향 압박", 1f, 1f,
