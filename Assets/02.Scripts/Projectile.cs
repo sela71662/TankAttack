@@ -35,10 +35,10 @@ public class Projectile : MonoBehaviour
     }
 
     // 발사한 탱크가 Instantiate 직후 호출한다
-    public void Init(Team ownerTeam)
+    public void Init(Team ownerTeam, float extraDamage = 1.0f)
     {
         team = ownerTeam;
-        damageMul = TeamConfig.DamageMultiplier(ownerTeam);
+        damageMul = TeamConfig.DamageMultiplier(ownerTeam) * extraDamage;
     }
 
     void Start()

@@ -15,6 +15,6 @@ public static class TeamConfig
 
     public static float DamageMultiplier(Team t)
     {
-        return IsAlly(t) ? 1.0f : enemyDamageMultiplier;
+        return IsAlly(t) ? AllyUpgrades.DamageMul : enemyDamageMultiplier;
     }
 }

@@ -13,6 +13,7 @@ public class AITurretCtrl : MonoBehaviour
     TurretAimer aimer;
     TankShooter shooter;
     TeamMember me;
+    TankInfo info;
     TeamMember target;
     float nextSearchTime;
 
@@ -21,7 +22,11 @@ public class AITurretCtrl : MonoBehaviour
         aimer = GetComponent<TurretAimer>();
         shooter = GetComponent<TankShooter>();
         me = GetComponent<TeamMember>();
+        info = GetComponent<TankInfo>();
     }
+
+    // 적 Original/Heavy/MegaBall은 사거리 안에 코어가 있으면 탱크보다 코어를 먼저 쏜다
+    bool CoreFirst => info != null && info.PrefersCore && !TeamConfig.IsAlly(me.team);
 
     void Update()
     {
@@ -53,6 +58,7 @@ public class AITurretCtrl : MonoBehaviour
             }
             else if (d < tankDist) { tankDist = d; bestTank = t; }
         }
+        if (CoreFirst && bestStruct != null) return bestStruct;
         if (bestTank != null) return bestTank;
         return attackStructures ? bestStruct : null;
     }

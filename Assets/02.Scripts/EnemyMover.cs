@@ -11,7 +11,7 @@ public class EnemyMover : MonoBehaviour
     public Transform[] route;      // 고정 경로 (도로 -> 다리 -> 섬 입구)
     public Transform approach;     // 코어 근처에서 NavMesh가 닿는 지점 (코어는 건물 위에 떠 있다)
     public float speedScale = 1.0f;
-    public float aggroRadius = 35.0f; // 섬 안에서 이 거리 안의 아군 탱크를 우선 추격한다
+    public float aggroRadius = 150.0f; // 아군 탱크 우선형(Light)이 섬 안에서 아군 탱크를 쫓는 거리. 코어 우선형(Original/Heavy/MegaBall)은 쓰지 않는다
     public float turnSpeed = 120.0f;  // 도/초
     public float followGap = 4.5f;    // 앞 탱크와 이 거리(탱크 크기 배율 적용) 안이면 멈춘다
     public float cornerCut = 12.0f;   // 도로 코너를 둥글게 깎을 최대 길이(m). 클수록 완만하게 돈다
@@ -160,13 +160,13 @@ public class EnemyMover : MonoBehaviour
         return agent.isOnNavMesh;
     }
 
-    // 가까운 아군 탱크가 있으면 그쪽으로, 없으면 코어 쪽으로
+    // 코어 우선형은 곧장 코어로, 아군 탱크 우선형은 가까운 아군 탱크가 있으면 그쪽으로(없으면 코어)
     void MoveFreely()
     {
         if (agent == null || !agent.isOnNavMesh || Time.time < nextRetargetTime) return;
         nextRetargetTime = Time.time + 0.5f;
 
-        Transform target = FindNearbyEnemyTank();
+        Transform target = info.PrefersCore ? null : FindNearbyEnemyTank();
         if (target == null) target = approach;
         if (target == null) return;
 
@@ -180,7 +180,7 @@ public class EnemyMover : MonoBehaviour
     {
         Transform best = null;
         float bestDist = aggroRadius * aggroRadius;
-        foreach (var t in FindObjectsByType<TeamMember>())
+        foreach (var t in TeamMember.All)
         {
             if (t.isStructure || !me.IsEnemy(t)) continue;
             float d = (t.transform.position - transform.position).sqrMagnitude;

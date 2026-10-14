@@ -15,11 +15,21 @@ public class WaveManager : MonoBehaviour
         public Entry(TankKind k, int a, int b) { kind = k; gateA = a; gateB = b; }
     }
 
+    // 웨이브 시작 때 건물에서 자동으로 소환되는 아군
+    [System.Serializable]
+    public class AllyEntry
+    {
+        public TankKind kind;
+        public int count;
+        public AllyEntry(TankKind k, int c) { kind = k; count = c; }
+    }
+
     [System.Serializable]
     public class Wave
     {
         public string label;
         public List<Entry> entries = new List<Entry>();
+        public List<AllyEntry> allies = new List<AllyEntry>();
         public float hpScale = 1.0f;   // 체력 배율
         public float sizeScale = 1.0f; // 크기 배율
     }
@@ -29,8 +39,12 @@ public class WaveManager : MonoBehaviour
     public SpawnGate gateA;
     public SpawnGate gateB;
     public Health coreHealth;
+    public AllySpawner allySpawner;   // 웨이브마다 자동 소환되는 아군을 만든다
     public GameObject[] enemyPrefabs; // TankInfo.kind로 종류를 구분한다
     public List<Wave> waves = new List<Wave>();
+
+    public int startGold = 0;
+    public float itemDropChance = 0.15f; // 적을 처치했을 때 아이템이 떨어질 확률
 
     public bool autoStart = true;
     public float startDelay = 10.0f;
@@ -58,6 +72,9 @@ public class WaveManager : MonoBehaviour
             if (info != null) prefabByKind[info.kind] = p;
         }
         if (waves.Count == 0) FillDefaultWaves();
+
+        GoldWallet.Reset(startGold);
+        AllyUpgrades.Reset();
     }
 
     void Start()
@@ -87,6 +104,7 @@ public class WaveManager : MonoBehaviour
             currentWave = i + 1;
             state = State.Spawning;
             onWaveStart?.Invoke(currentWave);
+            if (allySpawner != null) allySpawner.SpawnBatch(waves[i].allies);
             yield return SpawnWave(waves[i], 1.0f + speedGrowthPerWave * i);
 
             if (state == State.Defeat) yield break;
@@ -95,6 +113,7 @@ public class WaveManager : MonoBehaviour
                 yield return null;
 
             if (state == State.Defeat) yield break;
+            GoldWallet.Add(GoldWallet.WaveBonus(currentWave));
             onWaveCleared?.Invoke(currentWave);
 
             if (i < waves.Count - 1)
@@ -135,10 +154,27 @@ public class WaveManager : MonoBehaviour
         foreach (var q in queue)
         {
             if (state == State.Defeat) yield break;
-            alive.Add(q.gate.Spawn(q.prefab, wave.hpScale, speedScale, wave.sizeScale));
+            var enemy = q.gate.Spawn(q.prefab, wave.hpScale, speedScale, wave.sizeScale);
+            alive.Add(enemy);
+            HookKillReward(enemy);
             // 큰 탱크는 길어서 간격을 더 둔다. 도로에서 앞차에 막히는 일을 줄인다
             yield return new WaitForSeconds(spawnInterval * wave.sizeScale);
         }
+    }
+
+    // 적이 죽으면 골드를 주고 확률로 아이템을 떨어뜨린다
+    void HookKillReward(GameObject enemy)
+    {
+        var health = enemy.GetComponent<Health>();
+        var info = enemy.GetComponent<TankInfo>();
+        if (health == null || info == null) return;
+
+        TankKind kind = info.kind;
+        health.onDeath += h =>
+        {
+            GoldWallet.Add(GoldWallet.KillReward(kind));
+            ItemPickup.TryDrop(h.transform.position, itemDropChance);
+        };
     }
 
     void Defeat()
@@ -152,29 +188,32 @@ public class WaveManager : MonoBehaviour
     public void FillDefaultWaves()
     {
         waves.Clear();
-        // W1: 한쪽 게이트(A)에서만 Original 2대
-        waves.Add(MakeWave("기초 방어", 1f, 1f,
-            new Entry(TankKind.Original, 2, 0)));
-        waves.Add(MakeWave("기초 방어", 1f, 1f,
-            new Entry(TankKind.Original, 3, 3)));
-        waves.Add(MakeWave("다방향 압박", 1f, 1f,
-            new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Heavy, 1, 1), new Entry(TankKind.UFO, 1, 1)));
-        waves.Add(MakeWave("다방향 압박", 1f, 1f,
-            new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Heavy, 2, 2), new Entry(TankKind.UFO, 2, 1)));
-        waves.Add(MakeWave("진형 붕괴 위기", 1f, 1f,
-            new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Light, 2, 2), new Entry(TankKind.MegaBall, 1, 2)));
-        waves.Add(MakeWave("진형 붕괴 위기", 1f, 1f,
-            new Entry(TankKind.Original, 2, 3), new Entry(TankKind.Light, 3, 2), new Entry(TankKind.MegaBall, 2, 2), new Entry(TankKind.UFO, 1, 1)));
-        // 총력전: 모든 종류가 각 방향에서 동시에, 크기 2배 / 체력 10배
-        waves.Add(MakeWave("총력전", 10f, 2f,
-            new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Light, 2, 2), new Entry(TankKind.Heavy, 2, 2),
-            new Entry(TankKind.MegaBall, 2, 2), new Entry(TankKind.UFO, 2, 2)));
+        // W1: 플레이어 혼자 Gate A의 Original 2대를 상대한다 (조작 연습)
+        waves.Add(MakeWave("조작 연습", 1f, null,
+            new[] { new Entry(TankKind.Original, 2, 0) }));
+        // 이후 웨이브: 아군은 건물에서 자동 소환(누적), 적은 양쪽 게이트에서 나온다. 적 체력은 2배.
+        // 수와 체력은 골드 보상을 보며 조절한다
+        waves.Add(MakeWave("첫 방어선", enemyHpScale,
+            new[] { new AllyEntry(TankKind.Original, 1), new AllyEntry(TankKind.Heavy, 1) },
+            new[] { new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Heavy, 1, 0) }));
+        waves.Add(MakeWave("다방향 압박", enemyHpScale,
+            new[] { new AllyEntry(TankKind.Original, 2), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1) },
+            new[] { new Entry(TankKind.Original, 3, 2), new Entry(TankKind.Heavy, 1, 1), new Entry(TankKind.Light, 0, 1) }));
+        waves.Add(MakeWave("공중 위협", enemyHpScale,
+            new[] { new AllyEntry(TankKind.Original, 3), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1) },
+            new[] { new Entry(TankKind.Original, 4, 4), new Entry(TankKind.Heavy, 2, 1), new Entry(TankKind.Light, 1, 2), new Entry(TankKind.UFO, 1, 1) }));
+        waves.Add(MakeWave("총력전", enemyHpScale,
+            new[] { new AllyEntry(TankKind.Original, 3), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1), new AllyEntry(TankKind.MegaBall, 1) },
+            new[] { new Entry(TankKind.Original, 4, 4), new Entry(TankKind.Heavy, 2, 1), new Entry(TankKind.Light, 1, 2), new Entry(TankKind.UFO, 1, 0), new Entry(TankKind.MegaBall, 0, 1) }));
     }
 
-    static Wave MakeWave(string label, float hp, float size, params Entry[] entries)
+    const float enemyHpScale = 2.0f; // W2부터 적 체력 배율
+
+    static Wave MakeWave(string label, float hp, AllyEntry[] allies, Entry[] entries)
     {
-        var w = new Wave { label = label, hpScale = hp, sizeScale = size };
+        var w = new Wave { label = label, hpScale = hp };
         w.entries.AddRange(entries);
+        if (allies != null) w.allies.AddRange(allies);
         return w;
     }
 
@@ -191,6 +230,6 @@ public class WaveManager : MonoBehaviour
             State.Defeat => "DEFEAT",
             _ => $"Wave {currentWave}/{waves.Count}   Enemies {AliveCount}"
         };
-        GUI.Label(new Rect(0, 8, Screen.width, 60), $"{line}\n{core}", style);
+        GUI.Label(new Rect(0, 8, Screen.width, 90), $"{line}\n{core}\nGold {GoldWallet.Gold}", style);
     }
 }

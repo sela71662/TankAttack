@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 // 아군 스폰. 건물(building)에 붙어서 아군 탱크를 만들고 방어 범위 안을 돌아다니게 한다
@@ -11,9 +12,37 @@ public class AllySpawner : MonoBehaviour
     public TankKind[] startingAllies;     // 시작할 때 자동으로 스폰할 아군
     public float startDelay = 1.0f;
     public float staggerDelay = 1.5f;     // 연속 스폰 간격
+    public SpawnGate[] gates;             // 아군이 다리를 건널 때 따라갈 적 게이트 경로
+    public int maxAllies = 20;            // 구매로 소환할 수 있는 아군 수 상한 (웨이브 자동 소환은 상한을 무시한다)
 
     int nextHeavyPost;
     int nextGuardPost;
+    readonly List<GameObject> alive = new List<GameObject>();
+
+    public int AliveCount
+    {
+        get { alive.RemoveAll(g => g == null); return alive.Count; }
+    }
+
+    public bool CanBuy => AliveCount < maxAllies;
+
+    // 웨이브 시작 때 자동으로 소환할 아군을 간격을 두고 스폰한다
+    public void SpawnBatch(IEnumerable<WaveManager.AllyEntry> entries)
+    {
+        var kinds = new List<TankKind>();
+        foreach (var e in entries)
+            for (int i = 0; i < e.count; i++) kinds.Add(e.kind);
+        if (kinds.Count > 0) StartCoroutine(SpawnList(kinds));
+    }
+
+    IEnumerator SpawnList(List<TankKind> kinds)
+    {
+        foreach (var kind in kinds)
+        {
+            Spawn(kind);
+            yield return new WaitForSeconds(staggerDelay);
+        }
+    }
 
     public static Team AllyTeam => TeamConfig.playerTeam;
 
@@ -61,8 +90,10 @@ public class AllySpawner : MonoBehaviour
         var health = go.GetComponent<Health>();
         if (health != null) health.Refresh();
 
+        alive.Add(go);
         var mover = go.AddComponent<AllyMover>();
         mover.home = home;
+        mover.gates = gates;
         if (heavyPosts != null && heavyPosts.Length > 0)
         {
             // Heavy는 다리 앞에 서서 움직이지 않고, 나머지는 다리를 번갈아 맡아 지킨다 (적이 오는 쪽을 고르게 막는다)
