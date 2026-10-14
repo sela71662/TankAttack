@@ -12,11 +12,31 @@ public class SpawnGate : MonoBehaviour
     // 게이트가 속한 팀은 항상 적 팀이다
     public static Team EnemyTeam => TeamConfig.playerTeam == Team.Red ? Team.Yellow : Team.Red;
 
+    public bool IsDestroyed { get; private set; }
+
     void Awake()
     {
         var tm = GetComponent<TeamMember>();
         tm.isStructure = true;
         tm.SetTeam(EnemyTeam);
+
+        // 파괴돼도 오브젝트는 남긴다 (경로 웨이포인트가 자식이라 이미 나온 적과 아군이 계속 쓴다)
+        var health = GetComponent<Health>();
+        health.destroyOnDeath = false;
+        health.onDeath += _ => OnDestroyedByAllies();
+    }
+
+    // 파괴되면 더 이상 적이 나오지 않고, 표적에서도 빠진다
+    void OnDestroyedByAllies()
+    {
+        if (IsDestroyed) return;
+        IsDestroyed = true;
+        GoldWallet.Add(GoldWallet.gateReward);
+        GetComponent<TeamMember>().enabled = false; // TeamMember.All에서 빠진다
+        foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+        foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
+        var bar = GetComponent<HealthBar>();
+        if (bar != null) bar.enabled = false;
     }
 
     // hpScale: 체력 배율, speedScale: 이동 속도 배율, sizeScale: 크기 배율 (Wave 7: 2배)

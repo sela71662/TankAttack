@@ -28,6 +28,9 @@ public class Projectile : MonoBehaviour
     int bounces;
     Transform target;
     float nextSearchTime;
+    Vector3 lastPos;
+    float sweepRadius;
+    bool exploded;
 
     void Awake()
     {
@@ -44,11 +47,15 @@ public class Projectile : MonoBehaviour
     void Start()
     {
         rb.linearVelocity = transform.forward * speed;
+        lastPos = transform.position;
+        var sc = GetComponent<SphereCollider>();
+        sweepRadius = sc != null ? sc.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.y, transform.lossyScale.z) : 0.2f;
         Destroy(gameObject, lifetime);
     }
 
     void FixedUpdate()
     {
+        if (kind != ProjectileKind.Ball) SweepHit();
         if (kind != ProjectileKind.Plasma) return;
 
         if (target == null && Time.time >= nextSearchTime)
@@ -58,7 +65,12 @@ public class Projectile : MonoBehaviour
         }
         if (target == null) return;
 
-        Vector3 toTarget = (target.position + Vector3.up * 1.2f) - transform.position;
+        // 구조물(게이트는 아치)은 콜라이더 위쪽을 노린다. 가운데는 빈 곳이라 통과해 버린다
+        Vector3 aim = target.position + Vector3.up * 1.2f;
+        var tm = target.GetComponent<TeamMember>();
+        var col = tm != null && tm.isStructure ? target.GetComponentInChildren<Collider>() : null;
+        if (col != null && col.enabled) aim = col.bounds.center + Vector3.up * (col.bounds.extents.y * 0.5f);
+        Vector3 toTarget = aim - transform.position;
         Vector3 dir = Vector3.RotateTowards(rb.linearVelocity.normalized, toTarget.normalized,
                                             turnSpeed * Mathf.Deg2Rad * Time.fixedDeltaTime, 0);
         rb.linearVelocity = dir * speed;
@@ -69,7 +81,7 @@ public class Projectile : MonoBehaviour
     {
         Transform bestTank = null, bestStruct = null;
         float tankDist = float.MaxValue, structDist = float.MaxValue;
-        foreach (var t in FindObjectsByType<TeamMember>())
+        foreach (var t in TeamMember.All) // 활성 TeamMember만 (파괴된 게이트는 빠져 있다)
         {
             if (t.team == team) continue;
             float d = (t.transform.position - transform.position).sqrMagnitude;
@@ -83,16 +95,44 @@ public class Projectile : MonoBehaviour
         return attackStructures ? bestStruct : null;
     }
 
+    // 빠른 포탄은 한 물리 프레임에 1m 넘게 움직여서, 게이트처럼 속이 빈 얇은 메시 콜라이더는 트리거에 안 걸리고 통과한다.
+    // 그래서 지난 위치에서 지금 위치까지 구를 쓸어 보고 맞은 것이 있으면 트리거와 똑같이 처리한다
+    void SweepHit()
+    {
+        Vector3 now = transform.position;
+        Vector3 move = now - lastPos;
+        float dist = move.magnitude;
+        if (dist > 0.001f && !exploded)
+        {
+            float best = float.MaxValue;
+            RaycastHit hit = default;
+            Collider hitCol = null;
+            foreach (var h in Physics.SphereCastAll(lastPos, sweepRadius, move / dist, dist, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.distance >= best || !CanHit(h.collider)) continue;
+                best = h.distance; hit = h; hitCol = h.collider;
+            }
+            if (hitCol != null)
+            {
+                Detonate(hit.distance > 0 ? hit.point : now, hitCol.GetComponentInParent<TeamMember>());
+                return;
+            }
+        }
+        lastPos = now;
+    }
+
+    bool CanHit(Collider other)
+    {
+        if (other.isTrigger || other.GetComponentInParent<Projectile>() != null) return false;
+        var tm = other.GetComponentInParent<TeamMember>();
+        return tm == null || tm.team != team; // 아군은 통과
+    }
+
     // 트리거 충돌: Armor, Shell, Plasma
     void OnTriggerEnter(Collider other)
     {
-        if (kind == ProjectileKind.Ball || other.isTrigger) return;
-        if (other.GetComponentInParent<Projectile>() != null) return;
-
-        var tm = other.GetComponentInParent<TeamMember>();
-        if (tm != null && tm.team == team) return; // 아군은 통과
-
-        Detonate(SafeClosestPoint(other), tm);
+        if (kind == ProjectileKind.Ball || exploded || !CanHit(other)) return;
+        Detonate(SafeClosestPoint(other), other.GetComponentInParent<TeamMember>());
     }
 
     // ClosestPoint는 Box/Sphere/Capsule/볼록 Mesh 콜라이더에서만 쓸 수 있다 (지형 메시에서는 경고가 난다)
@@ -118,6 +158,7 @@ public class Projectile : MonoBehaviour
 
     void Detonate(Vector3 point, TeamMember hit)
     {
+        if (exploded) return;
         if (splashRadius > 0)
         {
             foreach (var col in Physics.OverlapSphere(point, splashRadius))
@@ -149,6 +190,8 @@ public class Projectile : MonoBehaviour
 
     void Explode(Vector3 point)
     {
+        if (exploded) return; // 같은 프레임에 트리거와 쓸기 검사가 둘 다 맞아도 한 번만 터진다
+        exploded = true;
         if (expEffect != null)
             Destroy(Instantiate(expEffect, point, Quaternion.identity), 1.0f);
         Destroy(gameObject);

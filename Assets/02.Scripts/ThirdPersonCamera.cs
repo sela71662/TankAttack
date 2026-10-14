@@ -1,6 +1,7 @@
 using UnityEngine;
 
-// 3인칭 카메라. 마우스로 탱크 주위를 돌고, 화면 중앙 조준점이 가리키는 지점(AimPoint)을 계산한다.
+// 3인칭 카메라. 차체 뒤에서 차체가 향한 방향을 보고(마우스 상하로 높이 조절), 화면 중앙 조준점이 가리키는 지점(AimPoint)을 계산한다.
+// followHull을 끄면 예전처럼 마우스로 탱크 주위를 돈다.
 // 메인 카메라에 붙인다. 커서는 잠기며 Esc로 풀고, 화면을 클릭하면 다시 잠긴다
 public class ThirdPersonCamera : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class ThirdPersonCamera : MonoBehaviour
     public float maxPitch = 55.0f;
     public float followSmooth = 14.0f;
     public float aimRange = 300.0f;
+    public bool followHull = true;     // true면 카메라가 항상 차체 뒤에서 차체가 향한 방향을 본다 (마우스 좌우는 쓰지 않는다)
+    public float hullTurnSmooth = 10.0f;
 
     Transform target;
     float yaw;
@@ -59,9 +62,17 @@ public class ThirdPersonCamera : MonoBehaviour
             yaw = target.eulerAngles.y;
         }
 
+        if (followHull)
+        {
+            // 지면에 맞춰 기울어진 차체라도 수평 방향만 쓴다
+            Vector3 f = Vector3.ProjectOnPlane(target.forward, Vector3.up);
+            if (f.sqrMagnitude > 1e-4f)
+                yaw = Mathf.LerpAngle(yaw, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg, Mathf.Clamp01(hullTurnSmooth * Time.deltaTime));
+        }
+
         if (Cursor.lockState == CursorLockMode.Locked)
         {
-            yaw += Input.GetAxis("Mouse X") * sensitivityX;
+            if (!followHull) yaw += Input.GetAxis("Mouse X") * sensitivityX;
             pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * sensitivityY, minPitch, maxPitch);
         }
         else if (Input.GetMouseButtonDown(0))

@@ -154,7 +154,11 @@ public class WaveManager : MonoBehaviour
         foreach (var q in queue)
         {
             if (state == State.Defeat) yield break;
-            var enemy = q.gate.Spawn(q.prefab, wave.hpScale, speedScale, wave.sizeScale);
+            // 파괴된 게이트 몫은 남은 게이트에서 나온다. 둘 다 파괴됐으면 더 나오지 않는다
+            var gate = q.gate;
+            if (gate == null || gate.IsDestroyed) gate = gate == gateA ? gateB : gateA;
+            if (gate == null || gate.IsDestroyed) continue;
+            var enemy = gate.Spawn(q.prefab, wave.hpScale, speedScale, wave.sizeScale);
             alive.Add(enemy);
             HookKillReward(enemy);
             // 큰 탱크는 길어서 간격을 더 둔다. 도로에서 앞차에 막히는 일을 줄인다

@@ -45,10 +45,10 @@ public class PlayerTankController : MonoBehaviour
 
         // 호수와 닿은 섬 가장자리(단차)로는 들어갈 수 없다. 막히면 벽을 따라 미끄러진다
         Vector3 pos = transform.position;
-        if (ShoreZone.Blocks(pos, pos + new Vector3(delta.x, 0, delta.z)))
+        if (ShoreBlocked(pos, new Vector3(delta.x, 0, delta.z)))
         {
-            if (!ShoreZone.Blocks(pos, pos + new Vector3(delta.x, 0, 0))) delta.z = 0;
-            else if (!ShoreZone.Blocks(pos, pos + new Vector3(0, 0, delta.z))) delta.x = 0;
+            if (!ShoreBlocked(pos, new Vector3(delta.x, 0, 0))) delta.z = 0;
+            else if (!ShoreBlocked(pos, new Vector3(0, 0, delta.z))) delta.x = 0;
             else { delta.x = 0; delta.z = 0; }
         }
         // 나무, 돌, 건물 위로는 올라갈 수 없다. 이미 올라가 있으면 내려오는 이동은 막지 않는다
@@ -62,5 +62,46 @@ public class PlayerTankController : MonoBehaviour
             }
         }
         cc.Move(delta);
+    }
+
+    // 차체 중심과 진행 방향 앞쪽 끝이 물가 구역 안으로 더 들어가는가
+    static bool ShoreBlocked(Vector3 pos, Vector3 flat)
+    {
+        if (flat.sqrMagnitude < 1e-8f) return false;
+        Vector3 lead = pos + flat + flat.normalized * 1.5f;
+        return ShoreZone.Blocks(pos, pos + flat) || ShoreZone.Blocks(pos, lead);
+    }
+
+    // 바로 아래 가장 가까운 표면이 호수인가 (다리 아래로 떨어진 경우처럼 지도상 물 칸이 아니어도 잡는다)
+    bool OnWaterSurface(Vector3 pos)
+    {
+        float best = float.MaxValue;
+        Collider top = null;
+        foreach (var h in Physics.RaycastAll(pos + Vector3.up * 1.0f, Vector3.down, 4.0f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (h.collider.transform.IsChildOf(transform)) continue;
+            if (h.distance < best) { best = h.distance; top = h.collider; }
+        }
+        return top != null && top.name.Trim().StartsWith("Lake");
+    }
+
+    // 어떤 이유로든 물에 빠졌으면 가장 가까운 안전한 땅으로 옮긴다
+    void LateUpdate()
+    {
+        Vector3 pos = transform.position;
+        if (!(ShoreZone.IsWater(pos) || OnWaterSurface(pos)) || !ShoreZone.FindSafe(pos, out Vector3 safe)) return;
+
+        // 안전한 칸의 지면 높이 (소품이 아닌 가장 높은 표면)
+        float ground = float.NegativeInfinity;
+        foreach (var h in Physics.RaycastAll(safe + Vector3.up * 60.0f, Vector3.down, 200.0f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (h.collider.transform.IsChildOf(transform) || PropGuard.IsProp(h.collider) || h.collider.name.Trim().StartsWith("Lake")) continue;
+            ground = Mathf.Max(ground, h.point.y);
+        }
+        if (float.IsNegativeInfinity(ground)) return;
+        cc.enabled = false;
+        transform.position = new Vector3(safe.x, ground + 0.5f, safe.z);
+        cc.enabled = true;
+        verticalVelocity = 0;
     }
 }

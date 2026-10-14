@@ -94,6 +94,9 @@ public class AllySpawner : MonoBehaviour
         var mover = go.AddComponent<AllyMover>();
         mover.home = home;
         mover.gates = gates;
+        // Heavy는 다리 앞을 지키고, 나머지 지상 아군은 다리를 건너 적 게이트를 공격하러 간다
+        var info = go.GetComponent<TankInfo>();
+        mover.assault = kind != TankKind.Heavy && (info == null || !info.flying);
         if (heavyPosts != null && heavyPosts.Length > 0)
         {
             // Heavy는 다리 앞에 서서 움직이지 않고, 나머지는 다리를 번갈아 맡아 지킨다 (적이 오는 쪽을 고르게 막는다)

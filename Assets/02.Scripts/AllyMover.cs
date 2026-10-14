@@ -4,8 +4,10 @@ using UnityEngine.AI;
 
 // 아군 탱크 이동. 건물 주변(방어 범위) 안에서 돌아다니다가 적 탱크가 보이면 다가가 교전한다.
 // post가 지정되면(Heavy) 그 지점으로 가서 멈춘 채 사거리 안의 적에게만 사격한다.
-// 적이 NavMesh 밖(도로/다리)에 있으면 섬 입구에서 NavMesh를 끄고 게이트 경로를 거꾸로 따라가 다리를 건너 교전하고,
-// 적이 사라지면 같은 길로 돌아와 다시 NavMesh로 복귀한다
+// 적이 섬 밖(도로/다리)에 있으면 섬 입구에서 NavMesh를 끄고 게이트 경로를 거꾸로 따라가 다리를 건너 교전하고,
+// 적이 사라지면 같은 길로 돌아와 다시 NavMesh로 복귀한다.
+// assault가 켜져 있으면 섬에 적이 없을 때 스스로 다리를 건너 도로를 따라 게이트까지 가서 적과 게이트를 공격하고,
+// 그 게이트가 파괴되면 섬으로 돌아와 남은 게이트로 간다
 [RequireComponent(typeof(TankInfo))]
 public class AllyMover : MonoBehaviour
 {
@@ -20,6 +22,10 @@ public class AllyMover : MonoBehaviour
     public float roamRadius = 40.0f;   // 배회할 반경 (guardPost가 없을 때)
     public float detectRadius = 70.0f; // 이 안의 적 탱크를 발견한다
     public float speedScale = 1.0f;
+    public bool assault = false;       // 적 게이트로 공격하러 간다 (Heavy 외 지상 아군)
+    public float gateStandOff = 18.0f; // 게이트 스폰 지점에서 이만큼 떨어진 곳까지 간다
+    public Vector2 islandMin = new Vector2(-205.0f, 82.0f); // 섬 범위 (x, z). 도로와 다리는 섬이 아니다
+    public Vector2 islandMax = new Vector2(-75.0f, 182.0f);
 
     NavMeshAgent agent;
     TankInfo info;
@@ -37,11 +43,19 @@ public class AllyMover : MonoBehaviour
     float lastEnemySeen;
     SpawnGate sortieGate;
     Vector3 sortieEntry;
+    SpawnGate routeGate;               // 지금 따라가는 경로의 게이트
+    bool assaultRoute;                 // 게이트 공격 중 (적이 없어도 돌아오지 않는다)
+
+    static bool Alive(SpawnGate g) => g != null && !g.IsDestroyed;
+
+    static int spawnCounter;           // 생성 순서대로 선호 게이트를 번갈아 준다
+    int gatePref;
 
     void Awake()
     {
         info = GetComponent<TankInfo>();
         me = GetComponent<TeamMember>();
+        gatePref = spawnCounter++;
 
         if (info.flying) return;
 
@@ -78,42 +92,38 @@ public class AllyMover : MonoBehaviour
             return;
         }
 
+        // 섬 안의 적이 먼저다 (코어 방어)
         Transform enemy = FindEnemyTank(detectRadius);
-        if (enemy != null)
-        {
-            if (OnIsland(enemy.position))
-            {
-                sortieGate = null;
-                agent.stoppingDistance = info.stopDistance;
-                GoTo(Leash(enemy.position));
-                wasMoving = true;
-                return;
-            }
-
-            // 적이 도로나 다리 위에 있다: 그 경로의 섬 입구까지 간 뒤 다리를 건넌다
-            var gate = ClosestGate(enemy.position);
-            if (gate != null)
-            {
-                if (sortieGate != gate)
-                {
-                    sortieGate = gate;
-                    sortieEntry = gate.route[gate.route.Length - 1].position;
-                }
-                if (FlatDist(transform.position, sortieEntry) < 3.0f)
-                {
-                    BeginRoute(gate);
-                    return;
-                }
-                agent.stoppingDistance = 1.0f;
-                GoTo(sortieEntry);
-                wasMoving = true;
-                return;
-            }
-        }
-        else
+        if (enemy != null && OnIsland(enemy.position))
         {
             sortieGate = null;
+            agent.stoppingDistance = info.stopDistance;
+            GoTo(Leash(enemy.position));
+            wasMoving = true;
+            return;
         }
+
+        // 적이 도로나 다리 위에 있으면 그 경로로, 아니면 공격형은 살아 있는 게이트로 출격한다
+        SpawnGate gate = enemy != null ? ClosestGate(enemy.position) : null;
+        if (gate == null && assault) gate = AssaultGate();
+        if (gate != null)
+        {
+            if (sortieGate != gate)
+            {
+                sortieGate = gate;
+                sortieEntry = gate.route[gate.route.Length - 1].position;
+            }
+            if (FlatDist(transform.position, sortieEntry) < 3.0f)
+            {
+                BeginRoute(gate);
+                return;
+            }
+            agent.stoppingDistance = 1.0f;
+            GoTo(sortieEntry);
+            wasMoving = true;
+            return;
+        }
+        sortieGate = null;
 
         // 적이 없으면 다리 앞(guardPost)으로 가서 대기한다. 도착하면 잠시 쉬었다가 근처의 다른 지점으로 자리를 옮긴다.
         // guardPost가 없으면 방어 범위 안을 돌아다닌다
@@ -140,10 +150,26 @@ public class AllyMover : MonoBehaviour
         return Vector3.Distance(a, b);
     }
 
-    // NavMesh(섬) 위에 있는 지점인가
-    static bool OnIsland(Vector3 p)
+    // 섬 위의 지점인가. NavMesh는 도로와 다리에도 있으므로 섬 범위로 판단하고, 다리 데크 위는 섬이 아니다
+    bool OnIsland(Vector3 p)
     {
-        return NavMesh.SamplePosition(p, out NavMeshHit hit, 3.0f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - p.y) < 4.0f;
+        if (p.x < islandMin.x || p.x > islandMax.x || p.z < islandMin.y || p.z > islandMax.y) return false;
+        if (Physics.Raycast(p + Vector3.up * 3.0f, Vector3.down, out RaycastHit h, 6.0f, ~0, QueryTriggerInteraction.Ignore)
+            && h.collider.name.Trim().StartsWith("Bridge")) return false;
+        return true;
+    }
+
+    // 공격할 게이트. 아군마다 선호하는 게이트를 나눠 두 다리로 고르게 가고, 그쪽이 파괴됐으면 남은 쪽으로 간다
+    SpawnGate AssaultGate()
+    {
+        if (gates == null || gates.Length == 0) return null;
+        int pref = gatePref % gates.Length;
+        for (int k = 0; k < gates.Length; k++)
+        {
+            var g = gates[(pref + k) % gates.Length];
+            if (Alive(g) && g.route != null && g.route.Length >= 2) return g;
+        }
+        return null;
     }
 
     // pos와 가장 가까운 게이트 경로. routeGateRange 안에 있는 경로가 없으면 null
@@ -154,7 +180,7 @@ public class AllyMover : MonoBehaviour
         float bestDist = routeGateRange;
         foreach (var g in gates)
         {
-            if (g == null || g.route == null || g.route.Length < 2) continue;
+            if (!Alive(g) || g.route == null || g.route.Length < 2) continue;
             for (int i = 0; i < g.route.Length - 1; i++)
             {
                 float d = DistToSegment(pos, g.route[i].position, g.route[i + 1].position);
@@ -177,7 +203,17 @@ public class AllyMover : MonoBehaviour
     {
         var pts = new List<Vector3> { transform.position };
         for (int i = gate.route.Length - 1; i >= 0; i--) pts.Add(gate.route[i].position);
+        // 공격형은 경로 시작점에서 더 나아가 게이트 스폰 지점 앞(gateStandOff)까지 간다
+        if (assault)
+        {
+            Vector3 first = gate.route[0].position;
+            Vector3 spawn = gate.spawnPoint != null ? gate.spawnPoint.position : gate.transform.position;
+            Vector3 d = spawn - first; d.y = 0;
+            if (d.magnitude > gateStandOff + 2.0f) pts.Add(first + d.normalized * (d.magnitude - gateStandOff));
+        }
         routePath = EnemyMover.SmoothPath(pts, 12.0f, 10);
+        routeGate = gate;
+        assaultRoute = assault;
         routeIdx = 0;
         retreating = false;
         holding = false;
@@ -210,7 +246,8 @@ public class AllyMover : MonoBehaviour
                 lastEnemySeen = Time.time;
                 holding = FlatDist(transform.position, enemy.position) <= info.stopDistance + routeEngageMargin;
             }
-            retreating = enemy == null && Time.time - lastEnemySeen > 2.5f;
+            // 공격형은 게이트가 파괴되어야 돌아온다. 그 외에는 적이 안 보이면 돌아온다
+            retreating = assaultRoute ? !Alive(routeGate) : (enemy == null && Time.time - lastEnemySeen > 2.5f);
         }
         if (holding) return; // 사거리 안에 적이 있으면 멈춰서 사격 (포탑은 AITurretCtrl이 돌린다)
 
@@ -221,7 +258,7 @@ public class AllyMover : MonoBehaviour
         }
         else if (routeIdx >= routePath.Count)
         {
-            return; // 게이트 앞까지 갔다: 적이 올 때까지 기다린다
+            return; // 게이트 앞까지 갔다: 게이트와 나오는 적을 쏜다 (포탑은 AITurretCtrl이 돌린다)
         }
 
         Vector3 target = routePath[routeIdx];
