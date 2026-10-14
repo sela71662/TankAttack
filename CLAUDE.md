@@ -16,7 +16,7 @@ TankAttack is a Unity 6 third-person tank **defense game** (editor `6000.5.10f1`
 - **`Assets/Skyden_Games/Low Poly Environment/Scenes/Depence Mode.unity`** is the scene all current gameplay lives in. It is a third-party asset scene that we modified directly.
 - `Assets/01.Scenes/scBattleField.unity` is the older prototype scene (legacy `TankMove`, `TurretCtrl`, `FireCannon`). Do not extend it.
 - NavMesh data for Depence Mode: `Assets/Skyden_Games/Low Poly Environment/Scenes/Depence Mode/NavMesh-NavMesh Surface.asset` (Unity moved it there when the scene was saved).
-- Object names in the Skyden scene often have trailing spaces (`"Gate "`, `"building "`, `"Bridge  (2)"`). Never use `GameObject.Find` on them; compare `t.name.Trim()`. The scene objects we added are `Gate A`, `Gate B`, `EnergyCore`, `WaveManager`, `PlayerSpawner`, `NavMesh Surface`, `ClimbLinks`.
+- Object names in the Skyden scene often have trailing spaces (`"Gate "`, `"building "`, `"Bridge  (2)"`). Never use `GameObject.Find` on them; compare `t.name.Trim()`. The scene objects we added are `Gate A`, `Gate B`, `EnergyCore`, `WaveManager`, `PlayerSpawner`, `NavMesh Surface`, `ShoreZone`.
 
 ## Layout
 
@@ -54,22 +54,22 @@ TankAttack is a Unity 6 third-person tank **defense game** (editor `6000.5.10f1`
 **Spawn gates and enemy movement.** `SpawnGate.Spawn(prefab, hpScale, speedScale, sizeScale)` creates an enemy and adds a mover.
 - Ground enemies use `EnemyMover`: first follow `Route` waypoints (roads and bridges) with **no NavMesh**, because the bridges have collider and NavMesh gaps. The waypoints are rounded into a quadratic Bezier path (`EnemyMover.SmoothPath`, `cornerCut`) so corners are curves. Tanks stop when another tank is ahead (`followGap`). At the end of the route a `NavMeshAgent` is added; the tank chases the nearest ally tank within `aggroRadius` or goes to the core's `ApproachPoint`.
 - UFOs use `FlyingMover` (straight line over the lake at core height + `flyHeight`).
-- Route waypoints are children of `Gate A/Route`, `Gate B/Route`. Do not add waypoints with short gaps near bridge entrances; the corner cut is limited to half of the neighboring segments.
+- Route waypoints are children of `Gate A/Route`, `Gate B/Route`. They are dense: the road curve piece (`Road 2`, centerline radius 25 m) is sampled as an arc every 3 m, the turn onto each bridge is a 6 m-radius arc, and the bridge decks have a point every 2 m at deck height (Bridge B has a collider gap mid-deck, interpolated). If a bridge is moved or rotated, regenerate the routes (and `HeavyPost_A/B`, 8 m past each bridge exit) rather than hand-editing.
 
 **Allies.** `AllySpawner` is on the `building` object (spawn point is on the building's local +Z side, which is world -Z because the building is rotated 180 degrees). `startingAllies` is currently empty, so the only yellow tank at the start is the player's. `AllyMover` guards a bridge post (`HeavyPost_A/B`) and engages nearby enemies; Heavy holds its post. When an enemy is on a road/bridge (off the NavMesh), non-Heavy ground allies walk to the island entrance, switch the NavMeshAgent off, follow the gate route in reverse, hold at range, and return after the enemies are gone (`AllyMover` route mode, needs `AllySpawner.gates`).
 
-**Shore.** `ShoreZone` (scene object) holds a baked distance-to-water grid (`Bake` context menu; water = ground below a `Lake*` plane, `Bridge*` surroundings are exempt). `PlayerTankController` cannot move closer than `blockDistance` (3 m) to the water, so shore ledges are blocked. The 39 `ClimbLinks` within 6 m of water were deleted (170 remain); AI NavMesh paths near the shore are not otherwise restricted.
+**Shore.** `ShoreZone` (scene object) holds a baked distance-to-water grid (`Bake` context menu; water = ground below a `Lake*` plane, `Bridge*` surroundings are exempt). `PlayerTankController` cannot move closer than `blockDistance` (3 m) to the water, so shore ledges are blocked. AI tanks are kept off the water by the lake modifiers.
 
-**Props.** `PropGuard` (name prefixes Tree, Rock, House, Tent, Warehouse, Doghouse, Mill, Watch Tower, building, Car) tells whether the ground below a point is a prop. `PlayerTankController` refuses moves onto props, `NavUtil.SampleNearest` avoids prop-top NavMesh points, and 118 `ClimbLinks` ending on props were deleted (52 remain). The terrain meshes are named `Cliff*`.
+**Props.** `PropGuard` (name prefixes Tree, Rock, House, Tent, Warehouse, Doghouse, Mill, Watch Tower, building, Car) tells whether the ground below a point is a prop. `PlayerTankController` refuses moves onto props, `NavUtil.SampleNearest` avoids prop-top NavMesh points (AI is kept off props by their Not Walkable modifiers). The terrain meshes are named `Cliff*`.
 
 **Core.** `EnergyCore` is a yellow structure (HP 1000, no ally multiplier, not destroyed on death). `CoreAnimator` rotates and hovers it. The `building` has a `TeamMember` (structure), a `BoxCollider` and a `Health` with `redirect` = core, so hitting the building damages the core. Its child `ApproachPoint` is a ground-level target for pathing because the core floats above the building.
 
 ## NavMesh (important)
 
-- The island has **two overlapping terrain levels** (plateau around y=0 and a lower terrace around y=-6). Never call `NavMesh.SamplePosition` with a large radius; it can return the wrong level. Use `NavUtil.SampleNearest`.
-- The NavMesh is baked **only over the island** (bounds center (-140,0,132), size 130x80x100), so paths never leave the island over the bridges. It is baked manually with `NavMeshBuilder.CollectSources` / `BuildNavMeshData` (agent slope capped at 60 by the baker, climb 2.0, radius 0.8, height 3.0) with markups: lakes and waterfall are not walkable, the core and non-structure tanks are ignored. Using `NavMeshSurface.BuildNavMesh()` would reset these settings.
-- Steep faces and steps are crossed with **auto-generated `NavMeshLink`s (209 generated, 52 after the shore and prop cleanups)** under `ClimbLinks`. They were generated by scanning the island on a 1 m grid for rises of 1.4 to 7 m. To change climbing behavior, regenerate them rather than editing the NavMesh settings.
-- Baking is memory heavy; keep the bounds small. The machine has little free RAM and Unity has run out of memory once during a large bake.
+- The island terrain (`Cliff*` meshes) was lowered so the island is now roughly one level (y about -5.5); the old plateau/terrace split and the `ClimbLinks` object are gone. Props were re-snapped to the new surface.
+- The NavMesh is baked with the `NavMesh Surface` Bake button (`NavMeshSurface.BuildNavMesh()`, whole scene, render meshes, agent type settings). Every tree, rock, building, fence, car, lake and the waterfall has a `NavMeshModifier` (override area = Not Walkable), and `EnergyCore` has one with Ignore From Build, so a normal Bake never puts NavMesh on them. Keep adding a Not Walkable modifier to any new prop.
+- The bake now covers roads and bridges too, not only the island. Use `NavUtil.SampleNearest` rather than a large-radius `NavMesh.SamplePosition`.
+- Baking is memory heavy. The machine has little free RAM and Unity has run out of memory once during a large bake.
 
 ## Tooling notes
 
