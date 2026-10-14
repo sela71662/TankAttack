@@ -15,7 +15,7 @@ TankAttack is a Unity 6 third-person tank **defense game** (editor `6000.5.10f1`
 
 - **`Assets/Skyden_Games/Low Poly Environment/Scenes/Depence Mode.unity`** is the scene all current gameplay lives in. It is a third-party asset scene that we modified directly.
 - `Assets/01.Scenes/scBattleField.unity` is the older prototype scene (legacy `TankMove`, `TurretCtrl`, `FireCannon`). Do not extend it.
-- NavMesh data for Depence Mode: `Assets/01.Scenes/NavMesh_DepenceMode.asset`.
+- NavMesh data for Depence Mode: `Assets/Skyden_Games/Low Poly Environment/Scenes/Depence Mode/NavMesh-NavMesh Surface.asset` (Unity moved it there when the scene was saved).
 - Object names in the Skyden scene often have trailing spaces (`"Gate "`, `"building "`, `"Bridge  (2)"`). Never use `GameObject.Find` on them; compare `t.name.Trim()`. The scene objects we added are `Gate A`, `Gate B`, `EnergyCore`, `WaveManager`, `PlayerSpawner`, `NavMesh Surface`, `ClimbLinks`.
 
 ## Layout
