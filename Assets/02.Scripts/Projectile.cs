@@ -21,6 +21,10 @@ public class Projectile : MonoBehaviour
     public float turnSpeed = 120.0f;    // Plasma: 초당 회전 각도
     public bool attackStructures = false; // Plasma: 적 탱크가 없을 때 게이트 같은 구조물을 노린다
     public GameObject expEffect;
+    public float expEffectScale = 1.0f; // 폭발 이펙트 파티클 크기 배율
+    public GameObject bounceEffect;     // Ball: 튕길 때마다 터지는 작은 불꽃
+    public bool addTrail = true;        // 종류별 색 꼬리
+    public Color trailColor = new Color(0, 0, 0, 0); // 알파가 0보다 크면 종류별 기본색 대신 이 색을 쓴다
 
     Team team;
     float damageMul = 1.0f;
@@ -51,6 +55,44 @@ public class Projectile : MonoBehaviour
         var sc = GetComponent<SphereCollider>();
         sweepRadius = sc != null ? sc.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.y, transform.lossyScale.z) : 0.2f;
         Destroy(gameObject, lifetime);
+        if (addTrail) AddTrail();
+    }
+
+    static Material trailMat;
+
+    // 종류마다 색과 굵기가 다른 꼬리를 붙여서 날아가는 포탄을 눈으로 구분하게 한다
+    void AddTrail()
+    {
+        Color c; float width, time;
+        switch (kind)
+        {
+            case ProjectileKind.Shell:  c = new Color(1.0f, 0.55f, 0.1f); width = 0.5f;  time = 0.45f; break;
+            case ProjectileKind.Ball:   c = new Color(0.6f, 0.8f, 1.0f);  width = 0.6f;  time = 0.35f; break;
+            case ProjectileKind.Plasma: c = new Color(0.4f, 1.0f, 0.9f);  width = 0.35f; time = 0.6f;  break;
+            default:                    c = new Color(1.0f, 0.95f, 0.5f); width = 0.12f; time = 0.12f; break;
+        }
+        if (trailColor.a > 0f) c = trailColor;
+        if (trailMat == null) trailMat = new Material(Shader.Find("Sprites/Default"));
+
+        var tr = gameObject.AddComponent<TrailRenderer>();
+        tr.sharedMaterial = trailMat;
+        tr.time = time;
+        // 부모 스케일에 곱해지지 않도록 월드 크기로 맞춘다
+        float s = Mathf.Max(transform.lossyScale.x, 0.01f);
+        tr.widthMultiplier = width / s;
+        tr.startColor = c;
+        tr.endColor = new Color(c.r, c.g, c.b, 0f);
+        tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        tr.receiveShadows = false;
+
+        if (kind == ProjectileKind.Plasma)
+        {
+            var l = gameObject.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = c;
+            l.range = 8f;
+            l.intensity = 1.5f;
+        }
     }
 
     void FixedUpdate()
@@ -152,6 +194,9 @@ public class Projectile : MonoBehaviour
         if (tm != null && tm.team != team)
             DamageTarget(c.collider.GetComponentInParent<Health>());
 
+        if (bounceEffect != null && c.contactCount > 0)
+            Destroy(Instantiate(bounceEffect, c.GetContact(0).point, Quaternion.identity), 1.0f);
+
         if (++bounces > maxBounces)
             Explode(transform.position);
     }
@@ -193,7 +238,29 @@ public class Projectile : MonoBehaviour
         if (exploded) return; // 같은 프레임에 트리거와 쓸기 검사가 둘 다 맞아도 한 번만 터진다
         exploded = true;
         if (expEffect != null)
-            Destroy(Instantiate(expEffect, point, Quaternion.identity), 1.0f);
+        {
+            var fx = Instantiate(expEffect, point + Vector3.up * 0.3f, Quaternion.identity); // 땅에 파묻히지 않게 살짝 띄운다
+            PlayEffect(fx, expEffectScale);
+            Destroy(fx, 3.0f); // 폭발 이펙트(파티클 약 2초)가 끝까지 나오게 한다
+        }
         Destroy(gameObject);
+    }
+
+    // Tanks 샘플의 폭발 프리팹은 Play On Awake가 꺼져 있어서 직접 재생해야 한다.
+    // scale이 1이 아니면 파티클 크기와 속도를 키운다 (Transform 크기는 파티클 크기에 영향을 주지 않는다)
+    static void PlayEffect(GameObject fx, float scale)
+    {
+        foreach (var ps in fx.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            if (!Mathf.Approximately(scale, 1.0f))
+            {
+                var m = ps.main;
+                m.startSizeMultiplier *= scale;
+                m.startSpeedMultiplier *= scale;
+            }
+            ps.Play(false);
+        }
+        foreach (var a in fx.GetComponentsInChildren<AudioSource>(true))
+            if (a.clip != null && !a.isPlaying) a.Play();
     }
 }

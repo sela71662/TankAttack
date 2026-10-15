@@ -323,7 +323,8 @@ public class AllyMover : MonoBehaviour
 
         Vector3 flat = target.position - transform.position;
         flat.y = 0;
-        float altitude = HomePos.y + info.flyHeight;
+        // 목표(적 탱크나 게이트) 위 flyHeight 높이를 유지한다
+        float altitude = target.position.y + info.flyHeight;
         var p = transform.position;
         p.y = Mathf.MoveTowards(p.y, altitude, 10.0f * Time.deltaTime);
 

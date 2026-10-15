@@ -69,6 +69,17 @@ public class HealthBar : MonoBehaviour
         return q.transform;
     }
 
+    // 컴포넌트를 꺼도 별도 루트의 막대는 남으므로 같이 숨긴다 (파괴된 게이트의 막대가 남던 문제)
+    void OnEnable()
+    {
+        if (root != null) root.gameObject.SetActive(true);
+    }
+
+    void OnDisable()
+    {
+        if (root != null) root.gameObject.SetActive(false);
+    }
+
     void OnDestroy()
     {
         if (root != null) Destroy(root.gameObject);

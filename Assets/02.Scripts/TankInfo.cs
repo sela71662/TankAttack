@@ -17,7 +17,7 @@ public class TankInfo : MonoBehaviour
     public bool flying = false;         // true면 지형을 무시하고 날아서 이동 (UFO)
     public float moveSpeed = 6.0f;      // 기본 이동 속도(m/s)
     public float stopDistance = 20.0f;  // 코어와 이 거리 안으로 들어오면 멈춘다
-    public float flyHeight = 6.0f;      // 비행형: 코어보다 이만큼 높은 고도로 난다
+    public float flyHeight = 6.0f;      // 비행형: 목표 탱크(또는 지면)보다 이만큼 높게 난다
 
     // 적일 때의 1순위 목표. Original/Heavy/MegaBall은 중앙 코어, Light/UFO는 아군 탱크
     public bool PrefersCore => kind == TankKind.Original || kind == TankKind.Heavy || kind == TankKind.MegaBall;

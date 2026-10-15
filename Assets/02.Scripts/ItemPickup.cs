@@ -34,19 +34,38 @@ public class ItemPickup : MonoBehaviour
         Create(pos, (ItemType)Random.Range(0, 4));
     }
 
+    // Resources/Items/Item_<종류>.prefab 모델을 쓰고, 없으면 색 구슬로 대신한다
+    static readonly float[] modelSize = { 2.4f, 2.4f, 2.2f, 2.4f }; // 종류별 모델 크기(m)
+
     public static ItemPickup Create(Vector3 pos, ItemType type)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject go;
+        var prefab = Resources.Load<GameObject>("Items/Item_" + type);
+        if (prefab != null)
+        {
+            go = Instantiate(prefab);
+            var rends = go.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                Bounds b = rends[0].bounds;
+                foreach (var r in rends) b.Encapsulate(r.bounds);
+                float longest = Mathf.Max(b.size.x, b.size.y, b.size.z);
+                if (longest > 0.001f) go.transform.localScale *= modelSize[(int)type] / longest;
+            }
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.transform.localScale = Vector3.one * 1.4f;
+            var mat = new Material(Shader.Find("Standard"));
+            mat.color = colors[(int)type];
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", colors[(int)type] * 0.8f);
+            go.GetComponent<Renderer>().material = mat;
+        }
         go.name = "Item_" + type;
-        Destroy(go.GetComponent<Collider>()); // 획득은 거리로 판정한다
-        go.transform.localScale = Vector3.one * 1.4f;
+        foreach (var c in go.GetComponentsInChildren<Collider>()) Destroy(c); // 획득은 거리로 판정한다
         go.transform.position = pos + Vector3.up * 1.5f;
-
-        var mat = new Material(Shader.Find("Standard"));
-        mat.color = colors[(int)type];
-        mat.EnableKeyword("_EMISSION");
-        mat.SetColor("_EmissionColor", colors[(int)type] * 0.8f);
-        go.GetComponent<Renderer>().material = mat;
 
         var item = go.AddComponent<ItemPickup>();
         item.type = type;

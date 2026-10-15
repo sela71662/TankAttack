@@ -13,9 +13,6 @@ public class ShopUI : MonoBehaviour
         TankKind.Original, TankKind.Heavy, TankKind.Light, TankKind.UFO, TankKind.MegaBall
     };
 
-    string message;
-    float messageUntil;
-
     bool Active => waves != null && waves.state != WaveManager.State.Victory && waves.state != WaveManager.State.Defeat;
 
     void Update()
@@ -28,10 +25,9 @@ public class ShopUI : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.U)) UpgradeAllies();
     }
 
-    void Toast(string text)
+    static void Toast(string text)
     {
-        message = text;
-        messageUntil = Time.time + 2.0f;
+        GameHUD.Toast(text);
     }
 
     void Summon(TankKind kind)
@@ -69,59 +65,52 @@ public class ShopUI : MonoBehaviour
     {
         if (!Active) return;
 
-        const float w = 150, h = 46, gap = 6;
+        float s = Screen.height / 1080f;
+        float w = 150 * s, h = 72 * s, gap = 6 * s;
         int count = summonKinds.Length + 2;
         float total = count * w + (count - 1) * gap;
         float x = (Screen.width - total) * 0.5f;
-        float y = Screen.height - h - 12;
+        float y = Screen.height - h - 14 * s;
 
         for (int i = 0; i < summonKinds.Length; i++)
         {
             var kind = summonKinds[i];
-            if (Button(ref x, y, w, h, gap, $"[{i + 1}] {kind}\n{GoldWallet.SummonCost(kind)}G"))
+            int cost = GoldWallet.SummonCost(kind);
+            if (Button(ref x, y, w, h, gap, s, $"{i + 1}", kind.ToString(), $"{cost}G", GoldWallet.Gold >= cost && allySpawner != null && allySpawner.CanBuy))
                 Summon(kind);
         }
-        if (Button(ref x, y, w, h, gap, $"[R] Repair Core\n{GoldWallet.repairCost}G"))
+        if (Button(ref x, y, w, h, gap, s, "R", "Repair Core", $"{GoldWallet.repairCost}G",
+                   GoldWallet.Gold >= GoldWallet.repairCost && coreHealth != null && coreHealth.hp < coreHealth.maxHp))
             RepairCore();
-        string up = AllyUpgrades.CanUpgrade
-            ? $"[U] Upgrade Lv{AllyUpgrades.Level}\n{GoldWallet.UpgradeCost(AllyUpgrades.Level)}G"
-            : "[U] Upgrade MAX";
-        if (Button(ref x, y, w, h, gap, up))
+        bool canUp = AllyUpgrades.CanUpgrade;
+        int upCost = canUp ? GoldWallet.UpgradeCost(AllyUpgrades.Level) : 0;
+        if (Button(ref x, y, w, h, gap, s, "U", canUp ? $"Upgrade Lv{AllyUpgrades.Level}" : "Upgrade", canUp ? $"{upCost}G" : "MAX",
+                   canUp && GoldWallet.Gold >= upCost))
             UpgradeAllies();
-
-        DrawBuffs();
-
-        if (Time.time < messageUntil)
-        {
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 18, alignment = TextAnchor.MiddleCenter };
-            GUI.Label(new Rect(0, y - 36, Screen.width, 30), message, style);
-        }
     }
 
-    static bool Button(ref float x, float y, float w, float h, float gap, string text)
+    // 살 수 있는 버튼은 밝게, 골드가 모자라거나 더 살 수 없으면 어둡게 그린다 (눌러도 이유를 알려 준다)
+    static bool Button(ref float x, float y, float w, float h, float gap, float s, string key, string label, string price, bool enabled)
     {
-        bool clicked = GUI.Button(new Rect(x, y, w, h), text);
+        var r = new Rect(x, y, w, h);
         x += w + gap;
+
+        var old = GUI.color;
+        GUI.color = enabled ? new Color(1f, 1f, 1f, 0.95f) : new Color(0.55f, 0.55f, 0.55f, 0.85f);
+        bool clicked = GUI.Button(r, GUIContent.none);
+        GUI.color = old;
+
+        var keyStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * s), fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperLeft };
+        var nameStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(17 * s), fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
+        var priceStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(18 * s), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerCenter };
+
+        keyStyle.normal.textColor = new Color(0.65f, 0.85f, 1f);
+        nameStyle.normal.textColor = enabled ? Color.white : new Color(0.75f, 0.75f, 0.75f);
+        priceStyle.normal.textColor = enabled ? new Color(1f, 0.85f, 0.25f) : new Color(0.7f, 0.6f, 0.3f);
+
+        GUI.Label(new Rect(r.x + 6 * s, r.y + 3 * s, r.width, r.height), $"[{key}]", keyStyle);
+        GUI.Label(new Rect(r.x, r.y + 18 * s, r.width, r.height), label, nameStyle);
+        GUI.Label(new Rect(r.x, r.y, r.width, r.height - 4 * s), price, priceStyle);
         return clicked;
-    }
-
-    // 플레이어에게 걸린 아이템 효과의 남은 시간
-    void DrawBuffs()
-    {
-        var player = PlayerTankController.Instance;
-        var buffs = player != null ? player.GetComponent<PlayerBuffs>() : null;
-        if (buffs == null) return;
-
-        float y = 100;
-        foreach (ItemType t in new[] { ItemType.Damage, ItemType.FireRate, ItemType.Speed })
-        {
-            float left = buffs.Remaining(t);
-            if (left <= 0) continue;
-            var old = GUI.color;
-            GUI.color = ItemPickup.ColorOf(t);
-            GUI.Label(new Rect(16, y, 300, 26), $"{t} {left:F0}s");
-            GUI.color = old;
-            y += 24;
-        }
     }
 }

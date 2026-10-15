@@ -8,6 +8,7 @@ public class SpawnGate : MonoBehaviour
     public Transform[] route;
     public Transform core;      // 공격/비행 목표
     public Transform approach;  // 지상 탱크가 코어로 접근할 때 NavMesh 위의 목표 지점
+    public GameObject destroyEffect; // 파괴될 때 터지는 큰 폭발
 
     // 게이트가 속한 팀은 항상 적 팀이다
     public static Team EnemyTeam => TeamConfig.playerTeam == Team.Red ? Team.Yellow : Team.Red;
@@ -32,6 +33,9 @@ public class SpawnGate : MonoBehaviour
         if (IsDestroyed) return;
         IsDestroyed = true;
         GoldWallet.Add(GoldWallet.gateReward);
+        NoticeUI.Show($"{name.Trim()} DESTROYED", $"+{GoldWallet.gateReward}G", new Color(1f, 0.8f, 0.2f));
+        if (destroyEffect != null)
+            Destroy(Instantiate(destroyEffect, transform.position + Vector3.up * 3f, Quaternion.identity), 4.0f);
         GetComponent<TeamMember>().enabled = false; // TeamMember.All에서 빠진다
         foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
         foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;

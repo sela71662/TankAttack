@@ -23,6 +23,7 @@ public class PlayerBuffs : MonoBehaviour
 
     public void Apply(ItemType type)
     {
+        GameHUD.Pickup(type, duration, healRatio);
         if (type == ItemType.Heal)
         {
             if (health != null) health.Heal(health.maxHp * healRatio);

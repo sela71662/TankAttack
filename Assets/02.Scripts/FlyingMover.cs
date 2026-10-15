@@ -20,13 +20,10 @@ public class FlyingMover : MonoBehaviour
 
     void Start()
     {
-        // 코어보다 flyHeight만큼 높은 고도로 올려 놓는다
-        if (core != null)
-        {
-            var p = transform.position;
-            p.y = core.position.y + info.flyHeight;
-            transform.position = p;
-        }
+        // 스폰 지면보다 flyHeight만큼 높은 고도로 올려 놓는다 (플레이어 시야에 들어오도록 낮게 난다)
+        var p = transform.position;
+        p.y += info.flyHeight;
+        transform.position = p;
     }
 
     void Update()
@@ -38,6 +35,12 @@ public class FlyingMover : MonoBehaviour
             if (target == null) target = core;
         }
         if (target == null) return;
+
+        // 목표(탱크) 머리 위 flyHeight 높이를 유지한다. 코어처럼 높이 떠 있는 목표는 지면 기준으로 난다
+        float baseY = target == core ? FlyUtil.GroundY(transform.position, target.position.y) : target.position.y;
+        var pos = transform.position;
+        pos.y = Mathf.MoveTowards(pos.y, baseY + info.flyHeight, 8.0f * Time.deltaTime);
+        transform.position = pos;
 
         Vector3 flat = target.position - transform.position;
         flat.y = 0;

@@ -44,7 +44,7 @@ public class WaveManager : MonoBehaviour
     public List<Wave> waves = new List<Wave>();
 
     public int startGold = 0;
-    public float itemDropChance = 0.15f; // 적을 처치했을 때 아이템이 떨어질 확률
+    public float itemDropChance = 0.4f; // 적을 처치했을 때 아이템이 떨어질 확률
 
     public bool autoStart = true;
     public float startDelay = 10.0f;
@@ -80,6 +80,10 @@ public class WaveManager : MonoBehaviour
     void Start()
     {
         if (coreHealth != null) coreHealth.onDeath += _ => Defeat();
+        // 웨이브, 골드, 체력, 아이템 효과를 보여주는 HUD
+        var hud = GetComponent<GameHUD>();
+        if (hud == null) hud = gameObject.AddComponent<GameHUD>();
+        hud.waves = this;
         if (autoStart) StartWaves();
     }
 
@@ -198,7 +202,7 @@ public class WaveManager : MonoBehaviour
         // 이후 웨이브: 아군은 건물에서 자동 소환(누적), 적은 양쪽 게이트에서 나온다. 적 체력은 2배.
         // 수와 체력은 골드 보상을 보며 조절한다
         waves.Add(MakeWave("첫 방어선", enemyHpScale,
-            new[] { new AllyEntry(TankKind.Original, 1), new AllyEntry(TankKind.Heavy, 1) },
+            new[] { new AllyEntry(TankKind.Original, 1), new AllyEntry(TankKind.Heavy, 2) }, // 처음 두 Heavy는 두 다리 옆 자리를 지킨다
             new[] { new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Heavy, 1, 0) }));
         waves.Add(MakeWave("다방향 압박", enemyHpScale,
             new[] { new AllyEntry(TankKind.Original, 2), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1) },
@@ -221,19 +225,4 @@ public class WaveManager : MonoBehaviour
         return w;
     }
 
-    // 간단한 상태 표시 (UI는 4단계에서 정식으로 만든다)
-    void OnGUI()
-    {
-        var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.UpperCenter };
-        string core = coreHealth != null ? $"Core {coreHealth.hp:F0}/{coreHealth.maxHp:F0}" : "";
-        string line = state switch
-        {
-            State.Waiting => "Ready",
-            State.Intermission => $"Next wave in {Mathf.CeilToInt(intermissionLeft)}s",
-            State.Victory => "VICTORY",
-            State.Defeat => "DEFEAT",
-            _ => $"Wave {currentWave}/{waves.Count}   Enemies {AliveCount}"
-        };
-        GUI.Label(new Rect(0, 8, Screen.width, 90), $"{line}\n{core}\nGold {GoldWallet.Gold}", style);
-    }
 }

@@ -5,10 +5,10 @@ using UnityEngine;
 // 메인 카메라에 붙인다. 커서는 잠기며 Esc로 풀고, 화면을 클릭하면 다시 잠긴다
 public class ThirdPersonCamera : MonoBehaviour
 {
-    public static Vector3 AimPoint { get; private set; }
+    public static Vector3 AimPoint { get; set; }
 
-    public float distance = 9.0f;
-    public float pivotHeight = 3.2f;   // 탱크 위쪽에서 바라볼 높이
+    public float distance = 20.0f;
+    public float pivotHeight = 5.5f;   // 탱크 위쪽에서 바라볼 높이
     public float sensitivityX = 3.0f;
     public float sensitivityY = 2.0f;
     public float minPitch = -8.0f;
@@ -21,6 +21,9 @@ public class ThirdPersonCamera : MonoBehaviour
     Transform target;
     float yaw;
     float pitch = 18.0f;
+    bool placed;      // 처음 위치를 잡았는가
+    bool started;     // 플레이어가 움직이기 시작해서 카메라가 따라가는 중인가
+    Vector3 startPos; // 처음 위치를 잡았을 때의 플레이어 위치
 
     void OnEnable()
     {
@@ -72,8 +75,12 @@ public class ThirdPersonCamera : MonoBehaviour
 
         if (Cursor.lockState == CursorLockMode.Locked)
         {
-            if (!followHull) yaw += Input.GetAxis("Mouse X") * sensitivityX;
-            pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * sensitivityY, minPitch, maxPitch);
+            // followHull일 때 마우스는 터렛(PlayerTurretCtrl)만 움직이고, 카메라는 차체 방향과 고정 각도를 유지한다
+            if (!followHull)
+            {
+                yaw += Input.GetAxis("Mouse X") * sensitivityX;
+                pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * sensitivityY, minPitch, maxPitch);
+            }
         }
         else if (Input.GetMouseButtonDown(0))
         {
@@ -89,22 +96,50 @@ public class ThirdPersonCamera : MonoBehaviour
         if (RaycastIgnoringPlayer(pivot, toCam.normalized, toCam.magnitude, out var hit))
             desired = hit.point + hit.normal * 0.3f;
 
-        transform.position = Vector3.Lerp(transform.position, desired, Mathf.Clamp01(followSmooth * Time.deltaTime));
-        transform.rotation = rot;
+        // 시작할 때 카메라가 저절로 움직이지 않도록, 처음에 플레이어 뒤로 한 번에 놓고 플레이어가 움직이기 시작할 때부터 따라간다
+        if (!started)
+        {
+            if (!placed)
+            {
+                transform.position = desired;
+                transform.rotation = rot;
+                placed = true;
+                startPos = target.position;
+            }
+            else if (!followHull || Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.01f || Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f
+                     || (target.position - startPos).sqrMagnitude > 9.0f)
+            {
+                started = true; // 키 입력이 있거나 밀려나서 3m 넘게 움직였다
+            }
+        }
+        if (started)
+        {
+            transform.position = Vector3.Lerp(transform.position, desired, Mathf.Clamp01(followSmooth * Time.deltaTime));
+            transform.rotation = rot;
+        }
 
-        // 화면 중앙이 가리키는 지점
-        var cam = GetComponent<Camera>();
-        Ray ray = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)) : new Ray(transform.position, transform.forward);
-        AimPoint = RaycastIgnoringPlayer(ray.origin, ray.direction, aimRange, out var aimHit)
-            ? aimHit.point
-            : ray.origin + ray.direction * aimRange;
+        // followHull이면 조준점은 PlayerTurretCtrl이 터렛이 향한 방향으로 정한다. 아니면 화면 중앙이 가리키는 지점
+        if (!followHull)
+        {
+            var cam = GetComponent<Camera>();
+            Ray ray = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)) : new Ray(transform.position, transform.forward);
+            AimPoint = RaycastIgnoringPlayer(ray.origin, ray.direction, aimRange, out var aimHit)
+                ? aimHit.point
+                : ray.origin + ray.direction * aimRange;
+        }
     }
 
-    // 화면 중앙 조준점 표시
+    // 조준점 표시. 터렛 조준이면 터렛이 향한 지점이 화면 어디인지에 그린다
     void OnGUI()
     {
         if (Cursor.lockState != CursorLockMode.Locked) return;
         float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
+        var cam = GetComponent<Camera>();
+        if (followHull && cam != null)
+        {
+            Vector3 sp = cam.WorldToScreenPoint(AimPoint);
+            if (sp.z > 0) { cx = sp.x; cy = Screen.height - sp.y; }
+        }
         GUI.color = new Color(1f, 1f, 1f, 0.9f);
         GUI.DrawTexture(new Rect(cx - 8, cy - 1, 16, 2), Texture2D.whiteTexture);
         GUI.DrawTexture(new Rect(cx - 1, cy - 8, 2, 16), Texture2D.whiteTexture);
