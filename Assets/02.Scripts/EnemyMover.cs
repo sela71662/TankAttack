@@ -13,7 +13,7 @@ public class EnemyMover : MonoBehaviour
     public float speedScale = 1.0f;
     public float aggroRadius = 150.0f; // 아군 탱크 우선형(Light)이 섬 안에서 아군 탱크를 쫓는 거리. 코어 우선형(Original/Heavy/MegaBall)은 쓰지 않는다
     public float turnSpeed = 120.0f;  // 도/초
-    public float followGap = 4.5f;    // 앞 탱크와 이 거리(탱크 크기 배율 적용) 안이면 멈춘다
+    public float followGap = 5.0f;    // 앞 탱크와 이 거리(탱크 크기 배율 적용) 안이면 멈춘다
     public float cornerCut = 12.0f;   // 도로 코너를 둥글게 깎을 최대 길이(m). 클수록 완만하게 돈다
     public float routeTurnSpeed = 240.0f; // 경로를 따라갈 때 차체 회전 속도(도/초). 곡선을 놓치지 않을 만큼 빠르게
 
@@ -24,11 +24,21 @@ public class EnemyMover : MonoBehaviour
     int routeIndex;
     float nextRetargetTime;
 
+    // 경로(도로와 다리)를 다 지나 섬에 도착했는가
+    public bool CrossedBridge => path != null && routeIndex >= path.Count;
+
     void Awake()
     {
         info = GetComponent<TankInfo>();
         me = GetComponent<TeamMember>();
+        wander = info.kind == TankKind.MegaBall; // MegaBall은 일직선으로 가지 않고 이리저리 움직이며 공격한다
     }
+
+    // MegaBall의 자유 이동
+    public bool wander;
+    public float wanderRadius = 40.0f;     // 섬에서 코어 주변으로 돌아다니는 반경(m)
+    readonly RoadWeaver weaver = new RoadWeaver(); // 도로에서 경로 좌우로 흔들리며 간다
+    float nextWanderTime;
 
     void Update()
     {
@@ -96,7 +106,9 @@ public class EnemyMover : MonoBehaviour
         float step = info.moveSpeed * speedScale * Time.deltaTime;
 
         // 앞에 다른 탱크가 있으면 겹치지 않도록 멈춰서 기다린다
-        if (IsBlockedAhead(new Vector3(to.x, 0, to.z)))
+        // (MegaBall은 옆으로 비켜 있으면 앞차를 추월한다)
+        bool overtaking = wander && Mathf.Abs(weaver.Lateral) > 1.5f;
+        if (!overtaking && IsBlockedAhead(new Vector3(to.x, 0, to.z)))
             return;
 
         if (to.magnitude <= step)
@@ -107,6 +119,7 @@ public class EnemyMover : MonoBehaviour
         }
 
         transform.position += to.normalized * step;
+        if (wander) weaver.Apply(transform, new Vector3(to.x, 0, to.z));
 
         Vector3 flat = new Vector3(to.x, 0, to.z);
         if (flat.sqrMagnitude > 0.01f)
@@ -165,6 +178,21 @@ public class EnemyMover : MonoBehaviour
     {
         if (agent == null || !agent.isOnNavMesh || Time.time < nextRetargetTime) return;
         nextRetargetTime = Time.time + 0.5f;
+
+        // MegaBall: 코어 주변을 이리저리 돌아다닌다. 몇 초마다 코어 근처의 무작위 지점으로 목적지를 바꾼다
+        if (wander && approach != null)
+        {
+            bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 1.0f;
+            if (Time.time >= nextWanderTime || arrived)
+            {
+                nextWanderTime = Time.time + Random.Range(2.5f, 5.0f);
+                Vector2 r = Random.insideUnitCircle * wanderRadius;
+                Vector3 goal = approach.position + new Vector3(r.x, 0, r.y);
+                agent.stoppingDistance = 1.0f;
+                if (NavUtil.SampleNearest(goal, 15.0f, out NavMeshHit wh)) agent.SetDestination(wh.position);
+            }
+            return;
+        }
 
         Transform target = info.PrefersCore ? null : FindNearbyEnemyTank();
         if (target == null) target = approach;

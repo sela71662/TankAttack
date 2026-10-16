@@ -16,6 +16,19 @@ public class Mine : MonoBehaviour
     {
         team = ownerTeam;
         damageMul = TeamConfig.DamageMultiplier(ownerTeam);
+
+        // 설치한 팀의 색: 적은 빨강, 아군은 노랑 (renderer.material은 이 지뢰만의 인스턴스)
+        var c = TeamConfig.IsAlly(ownerTeam) ? new Color(1.0f, 0.85f, 0.1f) : new Color(1.0f, 0.1f, 0.05f);
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            var m = r.material;
+            m.color = c;
+            if (m.HasProperty("_EmissionColor"))
+            {
+                m.EnableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", c * 0.8f);
+            }
+        }
     }
 
     void Start()

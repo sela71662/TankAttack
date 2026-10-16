@@ -3,6 +3,12 @@ using UnityEngine;
 // 비행형(UFO)이 고도를 정할 때 쓰는 도우미
 public static class FlyUtil
 {
+    public static bool IsAir(Transform t)
+    {
+        var ti = t != null ? t.GetComponentInParent<TankInfo>() : null;
+        return ti != null && ti.flying;
+    }
+
     // at 바로 아래의 지면 높이. 코어처럼 공중에 뜬 목표는 아래 건물이나 땅을 기준으로 잡는다.
     // 아무것도 없으면 fallback을 돌려준다
     public static float GroundY(Vector3 at, float fallback)

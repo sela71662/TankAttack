@@ -44,7 +44,7 @@ public class WaveManager : MonoBehaviour
     public List<Wave> waves = new List<Wave>();
 
     public int startGold = 0;
-    public float itemDropChance = 0.4f; // 적을 처치했을 때 아이템이 떨어질 확률
+    public float itemDropChance = 0.5f; // 적을 처치했을 때 아이템이 떨어질 확률
 
     public bool autoStart = true;
     public float startDelay = 10.0f;
@@ -97,6 +97,18 @@ public class WaveManager : MonoBehaviour
         get { alive.RemoveAll(g => g == null); return alive.Count; }
     }
 
+    void Update()
+    {
+        // 두 게이트가 모두 파괴되고 남은 적도 없어야 승리한다
+        bool running = state == State.Spawning || state == State.Fighting || state == State.Intermission;
+        if (running && gateA != null && gateB != null && gateA.IsDestroyed && gateB.IsDestroyed && AliveCount == 0)
+        {
+            StopAllCoroutines();
+            state = State.Victory;
+            onVictory?.Invoke();
+        }
+    }
+
     IEnumerator Run()
     {
         yield return new WaitForSeconds(startDelay);
@@ -131,8 +143,8 @@ public class WaveManager : MonoBehaviour
             }
         }
 
-        state = State.Victory;
-        onVictory?.Invoke();
+        // 마지막 웨이브를 막아도 바로 승리하지 않는다. 두 게이트가 모두 파괴되어야 Update에서 승리 처리한다
+        state = State.Fighting;
     }
 
     IEnumerator SpawnWave(Wave wave, float speedScale)
@@ -181,6 +193,7 @@ public class WaveManager : MonoBehaviour
         health.onDeath += h =>
         {
             GoldWallet.Add(GoldWallet.KillReward(kind));
+            AllyUpgrades.AddKill();
             ItemPickup.TryDrop(h.transform.position, itemDropChance);
         };
     }

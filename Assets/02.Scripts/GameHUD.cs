@@ -132,7 +132,7 @@ public class GameHUD : MonoBehaviour
 
     void OnGUI()
     {
-        if (waves == null) return;
+        if (waves == null || MapView.IsOpen) return; // 전체 맵을 볼 때는 맵 글자만 보인다
         DrawWaveAndCore();
         DrawGold();
         DrawPlayerAndBuffs();
@@ -143,7 +143,7 @@ public class GameHUD : MonoBehaviour
     // 위쪽 가운데: 웨이브 진행과 코어 체력
     void DrawWaveAndCore()
     {
-        float w = 460 * S, h = 92 * S;
+        float w = 460 * S, h = 100 * S;
         var box = new Rect((Screen.width - w) * 0.5f, 10 * S, w, h);
         Fill(box, Panel);
 
@@ -161,7 +161,7 @@ public class GameHUD : MonoBehaviour
         if (core != null)
         {
             float ratio = core.maxHp > 0 ? core.hp / core.maxHp : 0;
-            var bar = new Rect(box.x + 16 * S, box.y + 46 * S, w - 32 * S, 18 * S);
+            var bar = new Rect(box.x + 16 * S, box.y + 46 * S, w - 32 * S, 30 * S);
             Bar(bar, ratio, Color.Lerp(new Color(0.95f, 0.2f, 0.15f), new Color(0.2f, 0.9f, 0.9f), ratio));
             Text(bar, $"CORE  {Mathf.CeilToInt(core.hp)} / {Mathf.CeilToInt(core.maxHp)}", Style(15, TextAnchor.MiddleCenter), Color.white);
         }
@@ -217,19 +217,30 @@ public class GameHUD : MonoBehaviour
             }
         }
 
-        var hp = player.GetComponent<Health>();
-        float by = Screen.height - 140 * S;
-        var panel = new Rect(x, by, w, 62 * S);
+        // 플레이어 체력은 탱크 위의 체력바 안에 표시한다 (HealthBar.textInside)
+        float by = Screen.height - 160 * S;
+        var panel = new Rect(x, by, w, 82 * S);
         Fill(panel, Panel);
-        if (hp != null)
+        string up = $"ALLY UPGRADE  Lv {AllyUpgrades.Level}/{AllyUpgrades.MaxLevel}";
+        Text(new Rect(panel.x + 10 * S, panel.y + 4 * S, w - 20 * S, 24 * S), up, Style(15, TextAnchor.MiddleLeft), new Color(0.8f, 0.9f, 1f));
+        // 적 처치로 차오르는 레벨 게이지
+        var gauge = new Rect(panel.x + 10 * S, panel.y + 30 * S, w - 20 * S, 22 * S);
+        var gaugeColor = new Color(1f, 0.8f, 0.2f);
+        if (AllyUpgrades.CanUpgrade)
         {
-            float ratio = hp.maxHp > 0 ? hp.hp / hp.maxHp : 0;
-            var bar = new Rect(panel.x + 10 * S, panel.y + 10 * S, w - 20 * S, 22 * S);
-            Bar(bar, ratio, Color.Lerp(new Color(0.95f, 0.2f, 0.15f), new Color(0.25f, 0.9f, 0.3f), ratio));
-            Text(bar, $"HP  {Mathf.CeilToInt(hp.hp)} / {Mathf.CeilToInt(hp.maxHp)}", Style(15, TextAnchor.MiddleCenter), Color.white);
+            Bar(gauge, (float)AllyUpgrades.Progress / AllyUpgrades.KillsPerLevel, gaugeColor);
+            Text(gauge, $"{AllyUpgrades.Progress} / {AllyUpgrades.KillsPerLevel}", Style(14, TextAnchor.MiddleCenter), Color.white);
         }
-        string up = AllyUpgrades.CanUpgrade ? $"ALLY UPGRADE  Lv {AllyUpgrades.Level}/{AllyUpgrades.MaxLevel}" : "ALLY UPGRADE  MAX";
-        Text(new Rect(panel.x + 10 * S, panel.y + 34 * S, w - 20 * S, 24 * S), up, Style(15, TextAnchor.MiddleLeft), new Color(0.8f, 0.9f, 1f));
+        else
+        {
+            Bar(gauge, 1f, gaugeColor);
+            Text(gauge, "MAX", Style(14, TextAnchor.MiddleCenter), Color.white);
+        }
+        // 다음 레벨에서 늘어나는 강화 보상
+        string reward = AllyUpgrades.CanUpgrade
+            ? $"Lv{AllyUpgrades.Level + 1} : 공격력 +15%, 체력 +20%"
+            : "최대 레벨";
+        Text(new Rect(panel.x + 10 * S, panel.y + 54 * S, w - 20 * S, 24 * S), reward, Style(13, TextAnchor.MiddleLeft), new Color(1f, 0.9f, 0.5f));
     }
 
     // 가운데 아래쪽에 아이템 획득 같은 짧은 알림을 쌓는다

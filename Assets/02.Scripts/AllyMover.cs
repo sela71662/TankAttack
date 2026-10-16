@@ -43,7 +43,13 @@ public class AllyMover : MonoBehaviour
     float lastEnemySeen;
     SpawnGate sortieGate;
     Vector3 sortieEntry;
-    SpawnGate routeGate;               // 지금 따라가는 경로의 게이트
+    readonly AirDodger dodger = new AirDodger(); // 상대 UFO와 싸울 때의 회피 이동
+    readonly RoadWeaver weaver = new RoadWeaver(); // MegaBall이 도로에서 좌우로 흔들리며 가는 이동
+    Vector3 strafeOffset;                          // MegaBall이 적 주위에서 노리는 옆쪽 지점
+    float nextStrafe;
+    SpawnGate postGate;               // post가 지키는 다리의 게이트
+    bool postReleased;                 // 게이트가 파괴되어 post를 떠났다
+    SpawnGate routeGate;             // 지금 따라가는 경로의 게이트
     bool assaultRoute;                 // 게이트 공격 중 (적이 없어도 돌아오지 않는다)
 
     static bool Alive(SpawnGate g) => g != null && !g.IsDestroyed;
@@ -85,6 +91,18 @@ public class AllyMover : MonoBehaviour
 
     void Think()
     {
+        // 지키던 다리의 게이트가 파괴되면 자리를 떠나 다른 아군처럼 남은 게이트를 공격한다
+        if (post != null)
+        {
+            if (postGate == null) postGate = NearestGateEntry(post.position);
+            if (postGate != null && !Alive(postGate) && Alive(AssaultGate()))
+            {
+                post = null;
+                postReleased = true; // 근처 적을 먼저 처치한 뒤 assault를 켠다
+            }
+        }
+        if (postReleased && !assault && FindEnemyTank(detectRadius) == null) assault = true;
+
         if (post != null)
         {
             agent.stoppingDistance = 1.5f;
@@ -97,8 +115,21 @@ public class AllyMover : MonoBehaviour
         if (enemy != null && OnIsland(enemy.position))
         {
             sortieGate = null;
-            agent.stoppingDistance = info.stopDistance;
-            GoTo(Leash(enemy.position));
+            // 사거리 안이어도 지형/소품에 가려 쏠 수 없으면 계속 다가간다 (서로 못 보고 멈춰 서는 교착 방지)
+            agent.stoppingDistance = HasSight(enemy) ? info.stopDistance : 3.0f;
+            Vector3 goal = enemy.position;
+            // MegaBall은 적에게 일직선으로 가지 않고 몇 초마다 옆쪽 지점을 바꿔 가며 움직인다
+            if (info.kind == TankKind.MegaBall)
+            {
+                if (Time.time >= nextStrafe)
+                {
+                    nextStrafe = Time.time + Random.Range(2.0f, 4.0f);
+                    Vector2 r = Random.insideUnitCircle * 18.0f;
+                    strafeOffset = new Vector3(r.x, 0, r.y);
+                }
+                goal += strafeOffset;
+            }
+            GoTo(Leash(goal));
             wasMoving = true;
             return;
         }
@@ -144,6 +175,23 @@ public class AllyMover : MonoBehaviour
         }
     }
 
+    // 적이 지형/소품에 가리지 않고 보이는가. 탱크(TeamMember)는 시선을 막지 않는다
+    bool HasSight(Transform enemy)
+    {
+        Vector3 from = transform.position + Vector3.up * 2.0f;
+        Vector3 to = enemy.position + Vector3.up * 1.2f;
+        Vector3 dir = to - from;
+        float dist = dir.magnitude;
+        if (dist < 0.1f) return true;
+        foreach (var h in Physics.RaycastAll(from, dir / dist, dist, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (h.collider.transform.IsChildOf(transform) || h.collider.transform.IsChildOf(enemy)) continue;
+            if (h.collider.GetComponentInParent<TeamMember>() != null) continue;
+            return false;
+        }
+        return true;
+    }
+
     static float FlatDist(Vector3 a, Vector3 b)
     {
         a.y = 0; b.y = 0;
@@ -170,6 +218,21 @@ public class AllyMover : MonoBehaviour
             if (Alive(g) && g.route != null && g.route.Length >= 2) return g;
         }
         return null;
+    }
+
+    // 경로의 섬쪽 입구가 pos와 가장 가까운 게이트 (post가 지키는 다리의 게이트)
+    SpawnGate NearestGateEntry(Vector3 pos)
+    {
+        if (gates == null) return null;
+        SpawnGate best = null;
+        float bestDist = float.MaxValue;
+        foreach (var g in gates)
+        {
+            if (g == null || g.route == null || g.route.Length < 2) continue;
+            float d = FlatDist(pos, g.route[g.route.Length - 1].position);
+            if (d < bestDist) { bestDist = d; best = g; }
+        }
+        return best;
     }
 
     // pos와 가장 가까운 게이트 경로. routeGateRange 안에 있는 경로가 없으면 null
@@ -244,7 +307,7 @@ public class AllyMover : MonoBehaviour
             if (enemy != null)
             {
                 lastEnemySeen = Time.time;
-                holding = FlatDist(transform.position, enemy.position) <= info.stopDistance + routeEngageMargin;
+                holding = FlatDist(transform.position, enemy.position) <= info.stopDistance + routeEngageMargin && HasSight(enemy);
             }
             // 공격형은 게이트가 파괴되어야 돌아온다. 그 외에는 적이 안 보이면 돌아온다
             retreating = assaultRoute ? !Alive(routeGate) : (enemy == null && Time.time - lastEnemySeen > 2.5f);
@@ -272,6 +335,7 @@ public class AllyMover : MonoBehaviour
         }
 
         transform.position += to.normalized * step;
+        if (info.kind == TankKind.MegaBall) weaver.Apply(transform, new Vector3(to.x, 0, to.z)); // 줄지어 가는 탱크 옆에서 좌우로 움직인다
         Vector3 flat = new Vector3(to.x, 0, to.z);
         if (flat.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat), 240.0f * Time.deltaTime);
@@ -323,7 +387,20 @@ public class AllyMover : MonoBehaviour
 
         Vector3 flat = target.position - transform.position;
         flat.y = 0;
-        // 목표(적 탱크나 게이트) 위 flyHeight 높이를 유지한다
+        // 목표(적 탱크나 게이트) 위 flyHeight 높이를 유지한다. 상대 UFO는 같은 높이로 맞춘다
+        bool airTarget = FlyUtil.IsAir(target);
+
+        // 상대 UFO를 만나면 멈추지 않고 포탄을 피하며 상하좌우로 움직이면서 공격한다
+        if (airTarget)
+        {
+            Vector3 vel = dodger.Step(transform.position, target, me.team, info.moveSpeed * speedScale * 1.2f);
+            transform.position += vel * Time.deltaTime;
+            Vector3 face = target.position - transform.position; face.y = 0;
+            if (face.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(face), 180.0f * Time.deltaTime);
+            return;
+        }
+
         float altitude = target.position.y + info.flyHeight;
         var p = transform.position;
         p.y = Mathf.MoveTowards(p.y, altitude, 10.0f * Time.deltaTime);

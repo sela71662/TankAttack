@@ -27,7 +27,7 @@ public class NoticeUI : MonoBehaviour
     void OnGUI()
     {
         float t = Time.unscaledTime - startTime;
-        if (string.IsNullOrEmpty(text) || t > Duration) return;
+        if (string.IsNullOrEmpty(text) || t > Duration || MapView.IsOpen) return;
 
         // 0.2초 동안 나타나고 마지막 0.6초 동안 사라진다
         float alpha = Mathf.Clamp01(t / 0.2f) * Mathf.Clamp01((Duration - t) / 0.6f);

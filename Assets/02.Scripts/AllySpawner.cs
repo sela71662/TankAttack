@@ -15,7 +15,7 @@ public class AllySpawner : MonoBehaviour
     public SpawnGate[] gates;             // 아군이 다리를 건널 때 따라갈 적 게이트 경로
     public int maxAllies = 20;            // 구매로 소환할 수 있는 아군 수 상한 (웨이브 자동 소환은 상한을 무시한다)
 
-    GameObject[] postHolders; // heavyPosts[i]를 지키는 Heavy (파괴되면 null이 되어 자리가 빈다)
+    bool[] postTaken;         // heavyPosts[i]를 이미 Heavy에게 줬는가 (한 번 준 자리는 다시 채우지 않는다)
     int nextGuardPost;
     readonly List<GameObject> alive = new List<GameObject>();
 
@@ -97,24 +97,28 @@ public class AllySpawner : MonoBehaviour
         // 나머지 지상 아군은 다리를 건너 적 게이트를 공격하러 간다
         var info = go.GetComponent<TankInfo>();
         bool heavy = kind == TankKind.Heavy;
-        mover.assault = !heavy && (info == null || !info.flying);
+        // Heavy도 다리 자리를 못 받으면 나서서 게이트를 공격한다 (자리를 받은 Heavy는 게이트가 파괴될 때까지 지킨다)
+        mover.assault = info == null || !info.flying;
         if (heavyPosts != null && heavyPosts.Length > 0)
         {
             if (heavy)
             {
                 // 다리마다 Heavy 한 대가 그 자리를 지킨다. 빈 자리(아직 없거나 파괴됨)가 있으면 거기로 가고,
                 // 자리가 다 찼으면 post 없이 섬을 돌아다니며 적을 공격한다
-                if (postHolders == null || postHolders.Length != heavyPosts.Length) postHolders = new GameObject[heavyPosts.Length];
+                // 자리는 처음 받은 Heavy(W2)에게만 주고, 그 Heavy가 죽어도 다시 채우지 않는다
+                if (postTaken == null || postTaken.Length != heavyPosts.Length) postTaken = new bool[heavyPosts.Length];
                 for (int i = 0; i < heavyPosts.Length; i++)
                 {
-                    if (postHolders[i] != null) continue;
-                    postHolders[i] = go;
+                    if (postTaken[i]) continue;
+                    postTaken[i] = true;
                     mover.post = heavyPosts[i];
                     break;
                 }
             }
             else mover.guardPost = heavyPosts[nextGuardPost++ % heavyPosts.Length]; // 다리를 번갈아 맡아 대기 (적이 오는 쪽을 고르게 막는다)
         }
+        // 자리를 지키는 Heavy는 게이트가 파괴되고 근처에 적이 없을 때 AllyMover가 assault를 켠다
+        if (mover.post != null) mover.assault = false;
         return go;
     }
 

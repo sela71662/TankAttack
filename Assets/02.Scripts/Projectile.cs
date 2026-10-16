@@ -26,6 +26,15 @@ public class Projectile : MonoBehaviour
     public bool addTrail = true;        // 종류별 색 꼬리
     public Color trailColor = new Color(0, 0, 0, 0); // 알파가 0보다 크면 종류별 기본색 대신 이 색을 쓴다
 
+    public bool tintByTeam = false;     // 켜면 포탄 본체와 꼬리가 팀색(적 빨강, 아군 노랑)이 된다
+
+    // 날고 있는 모든 포탄. UFO가 날아오는 포탄을 피할 때 쓴다
+    public static readonly System.Collections.Generic.List<Projectile> All = new System.Collections.Generic.List<Projectile>();
+    public Team OwnerTeam => team;
+    public Vector3 Velocity => rb != null ? rb.linearVelocity : Vector3.zero;
+    void OnEnable() { All.Add(this); }
+    void OnDisable() { All.Remove(this); }
+
     Team team;
     float damageMul = 1.0f;
     Rigidbody rb;
@@ -46,6 +55,28 @@ public class Projectile : MonoBehaviour
     {
         team = ownerTeam;
         damageMul = TeamConfig.DamageMultiplier(ownerTeam) * extraDamage;
+        if (tintByTeam) TintBody();
+    }
+
+    Color TeamColor()
+    {
+        return TeamConfig.IsAlly(team) ? new Color(1.0f, 0.85f, 0.1f) : new Color(1.0f, 0.1f, 0.05f);
+    }
+
+    // 프리팹 머티리얼을 건드리지 않도록 인스턴스(renderer.material)에 팀색을 입힌다
+    void TintBody()
+    {
+        var c = TeamColor();
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            var m = r.material;
+            m.color = c;
+            if (m.HasProperty("_EmissionColor"))
+            {
+                m.EnableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", c * 1.5f);
+            }
+        }
     }
 
     void Start()
@@ -71,6 +102,7 @@ public class Projectile : MonoBehaviour
             case ProjectileKind.Plasma: c = new Color(0.4f, 1.0f, 0.9f);  width = 0.35f; time = 0.6f;  break;
             default:                    c = new Color(1.0f, 0.95f, 0.5f); width = 0.12f; time = 0.12f; break;
         }
+        if (tintByTeam) c = TeamColor();
         if (trailColor.a > 0f) c = trailColor;
         if (trailMat == null) trailMat = new Material(Shader.Find("Sprites/Default"));
 

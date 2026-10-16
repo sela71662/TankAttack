@@ -32,6 +32,7 @@ public class PlayerTurretCtrl : MonoBehaviour
     void Update()
     {
         if (Cursor.lockState != CursorLockMode.Locked) return; // 커서가 풀려 있으면(메뉴 상태) 조작하지 않는다
+        if (MapView.IsOpen) return; // 전체 맵을 보는 동안은 조준/발사하지 않는다
         if (cam == null) cam = Camera.main;
         if (cam == null) return;
 

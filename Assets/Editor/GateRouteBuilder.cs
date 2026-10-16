@@ -209,7 +209,7 @@ public static class GateRouteBuilder
         if (post == null) return;
         Vector3 dir = islandEnd - roadEnd; dir.y = 0; dir.Normalize();
         Vector3 right = Vector3.Cross(Vector3.up, dir);
-        Vector2 baseP = new Vector2(islandEnd.x, islandEnd.z) + new Vector2(dir.x, dir.z) * 4f;
+        Vector2 baseP = new Vector2(islandEnd.x, islandEnd.z) + new Vector2(dir.x, dir.z) * -1f; // 출구에서 1m 다리 쪽 (이전에는 섬 안쪽 4m였다)
         // 오른쪽 7m부터 시작해 물가가 아니고 주변에 나무/돌/건물이 없는(포구가 걸리지 않는) 자리를 찾는다
         Vector2 p = baseP + new Vector2(right.x, right.z) * 7f;
         bool found = false;

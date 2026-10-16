@@ -1,7 +1,7 @@
 using UnityEngine;
 
-// 골드로 아군 소환, 코어 수리, 아군 강화를 하는 임시 IMGUI 상점 (정식 UI 전까지 사용)
-// 숫자키 1~5: 소환, R: 코어 수리, U: 아군 강화. 커서가 풀려 있으면(Esc) 화면 버튼도 누를 수 있다
+// 골드로 아군 소환, 코어 수리를 하는 임시 IMGUI 상점 (정식 UI 전까지 사용). 아군 강화는 적 처치 게이지로 오른다 (AllyUpgrades)
+// 숫자키 1~5: 소환, R: 코어 수리. 커서가 풀려 있으면(Esc) 화면 버튼도 누를 수 있다
 public class ShopUI : MonoBehaviour
 {
     public WaveManager waves;
@@ -22,7 +22,6 @@ public class ShopUI : MonoBehaviour
         for (int i = 0; i < summonKinds.Length; i++)
             if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Summon(summonKinds[i]);
         if (Input.GetKeyDown(KeyCode.R)) RepairCore();
-        if (Input.GetKeyDown(KeyCode.U)) UpgradeAllies();
     }
 
     static void Toast(string text)
@@ -46,28 +45,13 @@ public class ShopUI : MonoBehaviour
         coreHealth.Heal(coreHealth.maxHp * GoldWallet.repairRatio);
     }
 
-    void UpgradeAllies()
-    {
-        if (!AllyUpgrades.CanUpgrade) { Toast("Upgrade is maxed"); return; }
-        if (!GoldWallet.TrySpend(GoldWallet.UpgradeCost(AllyUpgrades.Level))) { Toast("Not enough gold"); return; }
-
-        AllyUpgrades.LevelUp();
-        // 이미 있는 아군 탱크의 최대 체력도 올린다
-        foreach (var t in TeamMember.All)
-        {
-            if (t.isStructure || !TeamConfig.IsAlly(t.team)) continue;
-            var h = t.GetComponent<Health>();
-            if (h != null) h.RescaleKeepRatio();
-        }
-    }
-
     void OnGUI()
     {
-        if (!Active) return;
+        if (!Active || MapView.IsOpen) return;
 
         float s = Screen.height / 1080f;
         float w = 150 * s, h = 72 * s, gap = 6 * s;
-        int count = summonKinds.Length + 2;
+        int count = summonKinds.Length + 1;
         float total = count * w + (count - 1) * gap;
         float x = (Screen.width - total) * 0.5f;
         float y = Screen.height - h - 14 * s;
@@ -82,11 +66,6 @@ public class ShopUI : MonoBehaviour
         if (Button(ref x, y, w, h, gap, s, "R", "Repair Core", $"{GoldWallet.repairCost}G",
                    GoldWallet.Gold >= GoldWallet.repairCost && coreHealth != null && coreHealth.hp < coreHealth.maxHp))
             RepairCore();
-        bool canUp = AllyUpgrades.CanUpgrade;
-        int upCost = canUp ? GoldWallet.UpgradeCost(AllyUpgrades.Level) : 0;
-        if (Button(ref x, y, w, h, gap, s, "U", canUp ? $"Upgrade Lv{AllyUpgrades.Level}" : "Upgrade", canUp ? $"{upCost}G" : "MAX",
-                   canUp && GoldWallet.Gold >= upCost))
-            UpgradeAllies();
     }
 
     // 살 수 있는 버튼은 밝게, 골드가 모자라거나 더 살 수 없으면 어둡게 그린다 (눌러도 이유를 알려 준다)

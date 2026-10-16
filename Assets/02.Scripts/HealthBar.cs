@@ -10,6 +10,7 @@ public class HealthBar : MonoBehaviour
     public bool lockPosition = false; // true면 시작 위치에 고정 (코어처럼 위아래로 흔들리는 대상용)
     public bool scaleWithObject = false; // true면 대상 크기에 맞춰 바 크기와 높이도 키운다 (거대화한 탱크용)
     public bool showText = true;
+    public bool textInside = false; // true면 글자를 막대 안쪽 가운데에 넣는다 (막대 높이에 맞춰 글자 크기를 정한다)
     public Color fullColor = new Color(0.2f, 0.9f, 0.3f);
     public Color emptyColor = new Color(0.95f, 0.15f, 0.1f);
 
@@ -44,12 +45,21 @@ public class HealthBar : MonoBehaviour
         {
             var go = new GameObject("Text");
             go.transform.SetParent(root, false);
-            go.transform.localPosition = new Vector3(0, height * 1.1f, 0);
             text = go.AddComponent<TextMesh>();
-            text.anchor = TextAnchor.LowerCenter;
             text.alignment = TextAlignment.Center;
-            text.characterSize = 0.35f;
             text.fontSize = 48;
+            if (textInside)
+            {
+                go.transform.localPosition = new Vector3(0, 0, -0.02f);
+                text.anchor = TextAnchor.MiddleCenter;
+                text.characterSize = height * 0.8f / 4.8f; // 글자 높이가 막대 높이 안에 들어오게 한다
+            }
+            else
+            {
+                go.transform.localPosition = new Vector3(0, height * 1.1f, 0);
+                text.anchor = TextAnchor.LowerCenter;
+                text.characterSize = 0.35f;
+            }
             text.color = Color.white;
             go.GetComponent<MeshRenderer>().sortingOrder = 2;
         }

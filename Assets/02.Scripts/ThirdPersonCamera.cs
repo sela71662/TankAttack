@@ -134,7 +134,7 @@ public class ThirdPersonCamera : MonoBehaviour
     // 조준점 표시. 터렛 조준이면 터렛이 향한 지점이 화면 어디인지에 그린다
     void OnGUI()
     {
-        if (Cursor.lockState != CursorLockMode.Locked) return;
+        if (Cursor.lockState != CursorLockMode.Locked || MapView.IsOpen) return;
         float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
         var cam = GetComponent<Camera>();
         if (UseCursor)
