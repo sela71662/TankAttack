@@ -66,6 +66,16 @@ public class TurretAimer : MonoBehaviour
         Apply();
     }
 
+    // 속도 제한 없이 각도로 바로 맞춘다 (마우스로 조종하는 플레이어용)
+    public void SnapTo(float yaw, float pitch)
+    {
+        curYaw = limitYaw ? Mathf.Clamp(yaw, minYaw, maxYaw) : yaw;
+        curPitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+        errYaw = 0;
+        errPitch = 0;
+        Apply();
+    }
+
     void Apply()
     {
         // 좌우(Y축) 회전 후 상하(X축) 회전. 상하는 터렛이 향한 방향 기준으로 적용된다

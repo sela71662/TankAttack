@@ -6,6 +6,8 @@ using UnityEngine;
 public class ThirdPersonCamera : MonoBehaviour
 {
     public static Vector3 AimPoint { get; set; }
+    public static bool UseCursor { get; set; }       // true면 조준선을 CursorPos(화면 픽셀, 왼쪽 아래가 원점)에 그린다
+    public static Vector2 CursorPos { get; set; }
 
     public float distance = 20.0f;
     public float pivotHeight = 5.5f;   // 탱크 위쪽에서 바라볼 높이
@@ -13,10 +15,8 @@ public class ThirdPersonCamera : MonoBehaviour
     public float sensitivityY = 2.0f;
     public float minPitch = -8.0f;
     public float maxPitch = 55.0f;
-    public float followSmooth = 14.0f;
     public float aimRange = 300.0f;
     public bool followHull = true;     // true면 카메라가 항상 차체 뒤에서 차체가 향한 방향을 본다 (마우스 좌우는 쓰지 않는다)
-    public float hullTurnSmooth = 10.0f;
 
     Transform target;
     float yaw;
@@ -50,6 +50,8 @@ public class ThirdPersonCamera : MonoBehaviour
         foreach (var h in Physics.RaycastAll(origin, dir, maxDist, ~0, QueryTriggerInteraction.Ignore))
         {
             if (h.collider.GetComponentInParent<PlayerTankController>() != null) continue;
+            // 날아가는 포탄과 지뢰는 조준점을 가로채지 않는다 (쏜 포탄을 따라 조준선이 튄다)
+            if (h.collider.GetComponentInParent<Projectile>() != null || h.collider.GetComponentInParent<Mine>() != null) continue;
             if (h.distance < bestDist) { bestDist = h.distance; best = h; found = true; }
         }
         return found;
@@ -70,7 +72,7 @@ public class ThirdPersonCamera : MonoBehaviour
             // 지면에 맞춰 기울어진 차체라도 수평 방향만 쓴다
             Vector3 f = Vector3.ProjectOnPlane(target.forward, Vector3.up);
             if (f.sqrMagnitude > 1e-4f)
-                yaw = Mathf.LerpAngle(yaw, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg, Mathf.Clamp01(hullTurnSmooth * Time.deltaTime));
+                yaw = Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg; // 차체 방향을 지연 없이 그대로 따른다
         }
 
         if (Cursor.lockState == CursorLockMode.Locked)
@@ -114,7 +116,7 @@ public class ThirdPersonCamera : MonoBehaviour
         }
         if (started)
         {
-            transform.position = Vector3.Lerp(transform.position, desired, Mathf.Clamp01(followSmooth * Time.deltaTime));
+            transform.position = desired; // 플레이어 움직임에 딱 맞게 지연 없이 따라간다
             transform.rotation = rot;
         }
 
@@ -135,10 +137,16 @@ public class ThirdPersonCamera : MonoBehaviour
         if (Cursor.lockState != CursorLockMode.Locked) return;
         float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
         var cam = GetComponent<Camera>();
-        if (followHull && cam != null)
+        if (UseCursor)
+        {
+            // 플레이어가 마우스로 움직이는 조준선
+            cx = CursorPos.x; cy = Screen.height - CursorPos.y;
+        }
+        else if (followHull && cam != null)
         {
             Vector3 sp = cam.WorldToScreenPoint(AimPoint);
-            if (sp.z > 0) { cx = sp.x; cy = Screen.height - sp.y; }
+            if (sp.z <= 0) return; // 조준점이 카메라 뒤면 그리지 않는다 (화면 중앙으로 튀지 않게)
+            cx = sp.x; cy = Screen.height - sp.y;
         }
         GUI.color = new Color(1f, 1f, 1f, 0.9f);
         GUI.DrawTexture(new Rect(cx - 8, cy - 1, 16, 2), Texture2D.whiteTexture);

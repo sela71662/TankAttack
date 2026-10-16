@@ -9,13 +9,52 @@ public class GroundAlign : MonoBehaviour
     public float rayStartHeight = 0.8f;
     public float rayLength = 4.0f;
 
+    // 켜면 차체 바로 앞과 뒤 지면만 재서 앞뒤 기울기만 맞춘다 (옆 경사나 주변 경사에 끌려 기울지 않는다). 플레이어용
+    public bool frontBackOnly = false;
+    public float probeDistance = 1.5f;  // 앞뒤로 얼마나 떨어진 곳을 잴 것인가
+    [System.NonSerialized] public float forwardSlope; // frontBackOnly일 때 앞쪽이 높으면 +인 경사 (높이차 / 거리)
+
     Vector3 normal = Vector3.up;
+    static readonly RaycastHit[] probeHits = new RaycastHit[8];
+
+    // p 위쪽에서 아래로 쏴서 자기 자신을 뺀 가장 가까운 지면 높이
+    bool GroundY(Vector3 p, out float y)
+    {
+        int n = Physics.RaycastNonAlloc(p + Vector3.up * 2.0f, Vector3.down, probeHits, 6.0f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue;
+        y = 0;
+        bool found = false;
+        for (int i = 0; i < n; i++)
+        {
+            if (probeHits[i].collider.transform.IsChildOf(transform)) continue;
+            if (probeHits[i].distance < best) { best = probeHits[i].distance; y = probeHits[i].point.y; found = true; }
+        }
+        return found;
+    }
 
     void LateUpdate()
     {
         // 광선이 자기 몸통 콜라이더 안에서 시작하므로 자기 자신에는 맞지 않는다
         Vector3 target = Vector3.up;
-        if (Physics.Raycast(transform.position + Vector3.up * rayStartHeight, Vector3.down,
+        if (frontBackOnly)
+        {
+            Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+            if (fwd.sqrMagnitude > 0.0001f)
+            {
+                fwd.Normalize();
+                Vector3 p = transform.position;
+                bool hasF = GroundY(p + fwd * probeDistance, out float yF);
+                bool hasB = GroundY(p - fwd * probeDistance, out float yB);
+                forwardSlope = hasF && hasB ? (yF - yB) / (2.0f * probeDistance) : 0.0f;
+                if (hasF && hasB)
+                {
+                    // 앞뒤 높이차로 앞뒤 기울기만 구한다. 좌우(옆) 기울기는 없다
+                    Vector3 slopeDir = (fwd * (2.0f * probeDistance) + Vector3.up * (yF - yB)).normalized;
+                    target = Vector3.Cross(slopeDir, Vector3.Cross(Vector3.up, fwd)).normalized;
+                }
+            }
+        }
+        else if (Physics.Raycast(transform.position + Vector3.up * rayStartHeight, Vector3.down,
                             out RaycastHit hit, rayLength, ~0, QueryTriggerInteraction.Ignore))
             target = hit.normal;
 
