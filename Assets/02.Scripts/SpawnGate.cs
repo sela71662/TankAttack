@@ -9,6 +9,9 @@ public class SpawnGate : MonoBehaviour
     public Transform core;      // 공격/비행 목표
     public Transform approach;  // 지상 탱크가 코어로 접근할 때 NavMesh 위의 목표 지점
     public GameObject destroyEffect; // 파괴될 때 터지는 큰 폭발
+    public float blastScale = 4.0f;  // 폭발 크기 배율. 100m 밖에서도 보이도록 크게
+    public float smokeScale = 3.0f;  // 연기 크기 배율
+    public GameObject smokeEffect;   // 파괴된 뒤 그 자리에 계속 피어오르는 연기 (Smoke01)
 
     // 게이트가 속한 팀은 항상 적 팀이다
     public static Team EnemyTeam => TeamConfig.playerTeam == Team.Red ? Team.Yellow : Team.Red;
@@ -35,12 +38,44 @@ public class SpawnGate : MonoBehaviour
         GoldWallet.Add(GoldWallet.gateReward);
         NoticeUI.Show($"{name.Trim()} DESTROYED", $"+{GoldWallet.gateReward}G", new Color(1f, 0.8f, 0.2f));
         if (destroyEffect != null)
-            Destroy(Instantiate(destroyEffect, transform.position + Vector3.up * 3f, Quaternion.identity), 4.0f);
+        {
+            var blast = Instantiate(destroyEffect, transform.position + Vector3.up * 3f, Quaternion.identity);
+            ScaleEffect(blast, blastScale);
+            Destroy(blast, 6.0f); // 폭발은 한 번만 터지고 사라진다 (연기만 승리할 때까지 남는다)
+        }
+        if (smokeEffect != null)
+        {
+            var smoke = Instantiate(smokeEffect, transform.position, Quaternion.identity);
+            ScaleEffect(smoke, smokeScale);
+            foreach (var ps in smoke.GetComponentsInChildren<ParticleSystem>()) ps.Play(); // Play On Awake가 꺼진 프리팹도 나오게 한다
+            persistentEffects.Add(smoke);
+        }
         GetComponent<TeamMember>().enabled = false; // TeamMember.All에서 빠진다
         foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
         foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
         var bar = GetComponent<HealthBar>();
         if (bar != null) bar.enabled = false;
+    }
+
+    // 파괴된 게이트에서 계속 나오는 이펙트. 승리하면 WaveManager가 지운다
+    static readonly System.Collections.Generic.List<GameObject> persistentEffects = new System.Collections.Generic.List<GameObject>();
+
+    public static void ClearEffects()
+    {
+        foreach (var e in persistentEffects)
+            if (e != null) Destroy(e);
+        persistentEffects.Clear();
+    }
+
+    // 파티클 크기까지 함께 키운다 (Transform scale은 Hierarchy 모드에서만 파티클 크기에 반영된다)
+    static void ScaleEffect(GameObject fx, float scale)
+    {
+        foreach (var ps in fx.GetComponentsInChildren<ParticleSystem>())
+        {
+            var main = ps.main;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+        }
+        fx.transform.localScale *= scale;
     }
 
     // hpScale: 체력 배율, speedScale: 이동 속도 배율, sizeScale: 크기 배율 (Wave 7: 2배)

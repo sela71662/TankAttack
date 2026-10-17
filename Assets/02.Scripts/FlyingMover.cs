@@ -6,6 +6,9 @@ public class FlyingMover : MonoBehaviour
 {
     public Transform core;
     public float speedScale = 1.0f;
+    public float minClearance = 4.0f;   // 지면 위로 최소 이 높이는 유지한다
+    public float separationRadius = 10.0f; // 같은 팀 UFO와 이 거리 안이면 서로 밀어낸다
+    public float chaseAccel = 6.0f;     // 추격 중 가감속(m/s^2)
 
     TankInfo info;
     TeamMember me;
@@ -42,8 +45,9 @@ public class FlyingMover : MonoBehaviour
         // 상대 UFO를 만나면 멈추지 않고 포탄을 피하며 상하좌우로 움직이면서 공격한다
         if (airTarget)
         {
-            Vector3 vel = dodger.Step(transform.position, target, me.team, info.moveSpeed * speedScale * 1.2f);
-            transform.position += vel * Time.deltaTime;
+            Vector3 vel = dodger.Step(transform.position, target, me.team, info.moveSpeed * speedScale * 0.8f);
+            vel += FlyUtil.Separation(transform, me.team, separationRadius) * info.moveSpeed * speedScale * 0.5f;
+            transform.position = FlyUtil.ClampAboveGround(transform.position + vel * Time.deltaTime, minClearance);
             Vector3 face = target.position - transform.position; face.y = 0;
             if (face.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(face), 180.0f * Time.deltaTime);
@@ -52,7 +56,7 @@ public class FlyingMover : MonoBehaviour
 
         var pos = transform.position;
         pos.y = Mathf.MoveTowards(pos.y, baseY + info.flyHeight, 8.0f * Time.deltaTime);
-        transform.position = pos;
+        transform.position = FlyUtil.ClampAboveGround(pos, minClearance);
 
         Vector3 flat = target.position - transform.position;
         flat.y = 0;
@@ -63,13 +67,18 @@ public class FlyingMover : MonoBehaviour
             nextSightTime = Time.time + 0.3f;
             hasSight = HasSight(target);
         }
-        if (flat.magnitude <= info.stopDistance && (hasSight || flat.magnitude < 4.0f)) return;
-
-        Vector3 dir = flat.normalized;
-        transform.position += dir * info.moveSpeed * speedScale * Time.deltaTime;
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(dir), 180.0f * Time.deltaTime);
+        bool stop = flat.magnitude <= info.stopDistance && (hasSight || flat.magnitude < 4.0f);
+        Vector3 dir = flat.sqrMagnitude > 0.0001f ? flat.normalized : transform.forward;
+        // 출발과 정지가 부드럽도록 속도를 서서히 바꾼다
+        float spd = info.moveSpeed * speedScale;
+        Vector3 desired = (stop ? Vector3.zero : dir * spd) + FlyUtil.Separation(transform, me.team, separationRadius) * spd;
+        chaseVel = Vector3.MoveTowards(chaseVel, Vector3.ClampMagnitude(desired, spd), chaseAccel * Time.deltaTime);
+        transform.position += chaseVel * Time.deltaTime;
+        if (!stop)
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(dir), 180.0f * Time.deltaTime);
     }
 
+    Vector3 chaseVel;
     readonly AirDodger dodger = new AirDodger(); // 상대 UFO와 싸울 때의 회피 이동
     float nextSightTime;
     bool hasSight = true;

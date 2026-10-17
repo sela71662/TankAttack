@@ -43,6 +43,7 @@ public class WaveManager : MonoBehaviour
     public GameObject[] enemyPrefabs; // TankInfo.kind로 종류를 구분한다
     public List<Wave> waves = new List<Wave>();
 
+    public int countMultiplier = 2;     // 웨이브마다 나오는 적과 아군 수 배율
     public int startGold = 0;
     public float itemDropChance = 0.5f; // 적을 처치했을 때 아이템이 떨어질 확률
 
@@ -105,6 +106,7 @@ public class WaveManager : MonoBehaviour
         {
             StopAllCoroutines();
             state = State.Victory;
+            SpawnGate.ClearEffects(); // 게이트 파괴 이펙트는 승리하면 멈춘다
             onVictory?.Invoke();
         }
     }
@@ -120,7 +122,7 @@ public class WaveManager : MonoBehaviour
             currentWave = i + 1;
             state = State.Spawning;
             onWaveStart?.Invoke(currentWave);
-            if (allySpawner != null) allySpawner.SpawnBatch(waves[i].allies);
+            if (allySpawner != null) allySpawner.SpawnBatch(ScaledAllies(waves[i].allies));
             yield return SpawnWave(waves[i], 1.0f + speedGrowthPerWave * i);
 
             if (state == State.Defeat) yield break;
@@ -147,6 +149,14 @@ public class WaveManager : MonoBehaviour
         state = State.Fighting;
     }
 
+    List<AllyEntry> ScaledAllies(List<AllyEntry> src)
+    {
+        var list = new List<AllyEntry>();
+        if (src != null)
+            foreach (var a in src) list.Add(new AllyEntry(a.kind, a.count * countMultiplier));
+        return list;
+    }
+
     IEnumerator SpawnWave(Wave wave, float speedScale)
     {
         // (게이트, 프리팹) 목록을 만들어 섞어서 종류와 방향이 고루 나오게 한다
@@ -158,8 +168,8 @@ public class WaveManager : MonoBehaviour
                 Debug.LogWarning($"WaveManager: {e.kind} 프리팹이 enemyPrefabs에 없다");
                 continue;
             }
-            for (int i = 0; i < e.gateA; i++) queue.Add((gateA, prefab));
-            for (int i = 0; i < e.gateB; i++) queue.Add((gateB, prefab));
+            for (int i = 0; i < e.gateA * countMultiplier; i++) queue.Add((gateA, prefab));
+            for (int i = 0; i < e.gateB * countMultiplier; i++) queue.Add((gateB, prefab));
         }
         for (int i = queue.Count - 1; i > 0; i--)
         {
@@ -194,11 +204,11 @@ public class WaveManager : MonoBehaviour
         {
             GoldWallet.Add(GoldWallet.KillReward(kind));
             AllyUpgrades.AddKill();
-            ItemPickup.TryDrop(h.transform.position, itemDropChance);
+            if (kind != TankKind.UFO) ItemPickup.TryDrop(h.transform.position, itemDropChance); // UFO는 아이템을 떨어뜨리지 않는다
         };
     }
 
-    void Defeat()
+    public void Defeat()
     {
         if (state == State.Defeat || state == State.Victory) return;
         state = State.Defeat;

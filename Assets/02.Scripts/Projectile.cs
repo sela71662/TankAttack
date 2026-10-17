@@ -17,6 +17,8 @@ public class Projectile : MonoBehaviour
     public float damage = 20.0f;
     public float lifetime = 4.0f;
     public float splashRadius = 0.0f;   // Shell: 폭발 반경
+    public float ballAngleMin = 4.0f;   // Ball: 발사 방향에서 좌우로 틀어지는 각도(도)의 범위
+    public float ballAngleMax = 12.0f;
     public int maxBounces = 8;          // Ball: 이 횟수만큼 튕기면 사라진다
     public float turnSpeed = 120.0f;    // Plasma: 초당 회전 각도
     public bool attackStructures = false; // Plasma: 적 탱크가 없을 때 게이트 같은 구조물을 노린다
@@ -39,6 +41,7 @@ public class Projectile : MonoBehaviour
     float damageMul = 1.0f;
     Rigidbody rb;
     int bounces;
+    Vector3 ballVelocity;
     Transform target;
     float nextSearchTime;
     Vector3 lastPos;
@@ -81,6 +84,9 @@ public class Projectile : MonoBehaviour
 
     void Start()
     {
+        // Ball은 정면으로만 나가지 않고 발사마다 좌우 중 한쪽으로 조금 기울여 나간다
+        if (kind == ProjectileKind.Ball)
+            transform.Rotate(0, Random.Range(ballAngleMin, ballAngleMax) * (Random.value < 0.5f ? -1f : 1f), 0, Space.World);
         rb.linearVelocity = transform.forward * speed;
         lastPos = transform.position;
         var sc = GetComponent<SphereCollider>();
@@ -129,7 +135,8 @@ public class Projectile : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (kind != ProjectileKind.Ball) SweepHit();
+        if (kind == ProjectileKind.Ball) ballVelocity = rb.linearVelocity; // 충돌 직전 속도 (아군에 부딪힌 튕김을 되돌리는 데 쓴다)
+        else SweepHit();
         if (kind != ProjectileKind.Plasma) return;
 
         if (target == null && Time.time >= nextSearchTime)
@@ -223,6 +230,15 @@ public class Projectile : MonoBehaviour
         if (kind != ProjectileKind.Ball) return;
 
         var tm = c.collider.GetComponentInParent<TeamMember>();
+        // 아군에는 튕기지 않고 그대로 통과한다: 그 탱크의 콜라이더와 충돌을 끄고 부딪히기 전 속도를 되돌린다
+        if (tm != null && tm.team == team)
+        {
+            foreach (var other in tm.GetComponentsInChildren<Collider>())
+                foreach (var mine in GetComponentsInChildren<Collider>())
+                    Physics.IgnoreCollision(mine, other, true);
+            if (ballVelocity.sqrMagnitude > 0.01f) rb.linearVelocity = ballVelocity;
+            return;
+        }
         if (tm != null && tm.team != team)
             DamageTarget(c.collider.GetComponentInParent<Health>());
 

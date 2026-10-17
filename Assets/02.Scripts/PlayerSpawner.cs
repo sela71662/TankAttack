@@ -7,11 +7,18 @@ public class PlayerSpawner : MonoBehaviour
     public GameObject playerPrefab;
     public Transform spawnPoint;
     public float respawnDelay = 5.0f;
+    public int maxLives = 3;           // 목숨 수. 다 쓰면 패배한다
+
+    public static int Lives { get; private set; }
+    public static int MaxLives { get; private set; }
+    WaveManager waves;
 
     public GameObject Current { get; private set; }
 
     void Start()
     {
+        Lives = MaxLives = maxLives;
+        waves = FindFirstObjectByType<WaveManager>();
         Spawn();
     }
 
@@ -29,6 +36,15 @@ public class PlayerSpawner : MonoBehaviour
 
     void OnPlayerDeath(Health h)
     {
+        Lives = Mathf.Max(0, Lives - 1);
+        if (Lives <= 0)
+        {
+            // 목숨을 다 썼다: 부활하지 않고 패배
+            GameHUD.Toast("목숨을 모두 잃었습니다");
+            if (waves != null) waves.Defeat();
+            return;
+        }
+        GameHUD.Toast($"목숨 {Lives}개 남음");
         StartCoroutine(Respawn());
     }
 

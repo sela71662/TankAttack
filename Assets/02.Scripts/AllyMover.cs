@@ -13,6 +13,7 @@ public class AllyMover : MonoBehaviour
 {
     public Transform home;             // 방어 중심 (코어)
     public SpawnGate[] gates;          // 다리를 건널 때 거꾸로 따라갈 경로(게이트 route)
+    public float routeHoldMax = 28.0f;     // 경로 위에서 멈추는 거리의 상한. 정지거리가 긴 Heavy도 다른 탱크와 같은 지점에서 멈춰 간격이 벌어지지 않는다
     public float routeEngageMargin = 8.0f; // 경로 위에서 적이 (stopDistance + 이 값) 안이면 멈춰서 사격한다
     public float routeGateRange = 25.0f;   // 적이 경로에서 이 거리 안에 있어야 그 경로로 출격한다
     public Transform post;             // 지정 시 이 지점에서 정지 (Heavy)
@@ -109,6 +110,9 @@ public class AllyMover : MonoBehaviour
             GoTo(post.position);
             return;
         }
+
+        // 다리를 건넌 MegaBall은 게이트 쪽 도로와 주변을 돌아다니며 적을 공격한다
+        if (roaming) { RoamOutside(); return; }
 
         // 섬 안의 적이 먼저다 (코어 방어)
         Transform enemy = FindEnemyTank(detectRadius);
@@ -307,7 +311,7 @@ public class AllyMover : MonoBehaviour
             if (enemy != null)
             {
                 lastEnemySeen = Time.time;
-                holding = FlatDist(transform.position, enemy.position) <= info.stopDistance + routeEngageMargin && HasSight(enemy);
+                holding = FlatDist(transform.position, enemy.position) <= Mathf.Min(info.stopDistance + routeEngageMargin, routeHoldMax) && HasSight(enemy);
             }
             // 공격형은 게이트가 파괴되어야 돌아온다. 그 외에는 적이 안 보이면 돌아온다
             retreating = assaultRoute ? !Alive(routeGate) : (enemy == null && Time.time - lastEnemySeen > 2.5f);
@@ -321,12 +325,16 @@ public class AllyMover : MonoBehaviour
         }
         else if (routeIdx >= routePath.Count)
         {
+            // MegaBall은 게이트 앞에서 멈추지 않고 NavMesh로 내려가 주변을 돌아다닌다
+            if (info.kind == TankKind.MegaBall && assaultRoute && Alive(routeGate)) { BeginRoam(); return; }
             return; // 게이트 앞까지 갔다: 게이트와 나오는 적을 쏜다 (포탑은 AITurretCtrl이 돌린다)
         }
 
         Vector3 target = routePath[routeIdx];
         Vector3 to = target - transform.position;
         float step = info.moveSpeed * speedScale * Time.deltaTime;
+        // 같은 방향으로 가는 앞 탱크와 겹치지 않도록 뒤따르는 쪽이 멈춰서 기다린다
+        if (IsBlockedAhead(new Vector3(to.x, 0, to.z))) return;
         if (to.magnitude <= step)
         {
             transform.position = target;
@@ -339,6 +347,114 @@ public class AllyMover : MonoBehaviour
         Vector3 flat = new Vector3(to.x, 0, to.z);
         if (flat.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat), 240.0f * Time.deltaTime);
+    }
+
+    public float followGap = 5.0f; // 경로 위에서 앞 탱크와 이 거리(탱크 크기 배율 적용) 안이면 멈춘다
+
+    // 진행 방향 앞쪽(약 60도 안)에 같은 방향으로 가는 다른 탱크가 gap 안에 있으면 막힌 것으로 본다.
+    // 마주 오는 탱크는 세지 않아(복귀 중인 아군 등) 서로 막혀 멈추는 일이 없다
+    bool IsBlockedAhead(Vector3 flatDir)
+    {
+        if (flatDir.sqrMagnitude < 0.0001f) return false;
+        flatDir.Normalize();
+        foreach (var other in TeamMember.All)
+        {
+            if (other.isStructure || other.gameObject == gameObject) continue;
+            var oi = other.GetComponent<TankInfo>();
+            if (oi != null && oi.flying) continue;
+
+            Vector3 d = other.transform.position - transform.position;
+            d.y = 0;
+            if (d.sqrMagnitude < 0.25f) continue; // 같은 자리에 겹쳐 스폰된 탱크는 서로 막지 않는다
+            float gap = followGap * Mathf.Max(transform.lossyScale.x, other.transform.lossyScale.x);
+            if (d.sqrMagnitude > gap * gap) continue;
+            if (Vector3.Dot(flatDir, d.normalized) <= 0.5f) continue;
+            if (Vector3.Dot(flatDir, other.transform.forward) < -0.2f) continue; // 마주 보고 오는 탱크
+            return true;
+        }
+        return false;
+    }
+
+    // 다리를 건넌 MegaBall의 자유 배회 (게이트 쪽 도로와 주변)
+    public float outsideRoamRadius = 60.0f; // 게이트 앞 경로 끝에서 이 거리 안을 돌아다닌다
+    bool roaming;
+    Vector3 roamCenter;
+
+    void BeginRoam()
+    {
+        roamCenter = routePath[routePath.Count - 1];
+        roaming = true;
+        onRoute = false;
+        wasMoving = false;
+        idleUntil = 0;
+        if (NavUtil.SampleNearest(transform.position, 20.0f, out NavMeshHit hit))
+            transform.position = hit.position;
+        agent.enabled = true;
+    }
+
+    void RoamOutside()
+    {
+        // 게이트가 파괴되면 가장 가까운 경로 지점으로 돌아가 경로를 거꾸로 따라 섬으로 복귀한다
+        if (!Alive(routeGate))
+        {
+            int best = 0;
+            float bestD = float.MaxValue;
+            for (int i = 0; i < routePath.Count; i++)
+            {
+                float d = FlatDist(transform.position, routePath[i]);
+                if (d < bestD) { bestD = d; best = i; }
+            }
+            if (bestD < 4.0f)
+            {
+                roaming = false;
+                agent.enabled = false;
+                onRoute = true;
+                retreating = true;
+                holding = false;
+                routeIdx = best;
+                return;
+            }
+            agent.stoppingDistance = 1.0f;
+            GoTo(routePath[best]);
+            return;
+        }
+
+        // 섬 밖(도로, 다리)의 적 탱크를 쫓는다. 섬 안의 적은 다른 아군이 맡는다
+        Transform enemy = FindEnemyTank(detectRadius);
+        if (enemy != null && !OnIsland(enemy.position))
+        {
+            agent.stoppingDistance = HasSight(enemy) ? info.stopDistance : 3.0f;
+            if (Time.time >= nextStrafe)
+            {
+                nextStrafe = Time.time + Random.Range(2.0f, 4.0f);
+                Vector2 r = Random.insideUnitCircle * 18.0f;
+                strafeOffset = new Vector3(r.x, 0, r.y);
+            }
+            GoTo(ClampToRoam(enemy.position + strafeOffset));
+            wasMoving = true;
+            return;
+        }
+
+        // 적이 없으면 게이트 주변의 무작위 지점을 돌아다닌다
+        agent.stoppingDistance = 1.0f;
+        bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 1.0f;
+        if (wasMoving && arrived)
+        {
+            wasMoving = false;
+            idleUntil = Time.time + Random.Range(0.5f, 2.0f);
+        }
+        if (!wasMoving && Time.time >= idleUntil)
+        {
+            Vector2 r = Random.insideUnitCircle * outsideRoamRadius;
+            GoTo(roamCenter + new Vector3(r.x, 0, r.y));
+            wasMoving = true;
+        }
+    }
+
+    Vector3 ClampToRoam(Vector3 p)
+    {
+        Vector3 d = p - roamCenter; d.y = 0;
+        return roamCenter + Vector3.ClampMagnitude(d, outsideRoamRadius * 1.5f) + Vector3.up * (p.y - roamCenter.y);
     }
 
     // 방어 중심에서 leashRadius 안으로 목표를 제한한다
@@ -370,9 +486,12 @@ public class AllyMover : MonoBehaviour
     }
 
     // 비행형 아군(UFO): 가장 가까운 적 탱크, 없으면 적 구조물(게이트)을 향해 날아간다
+    Vector3 flyVel; // 비행 중 부드러운 가감속용 속도
+
     void FlyUpdate()
     {
-        Transform target = FindEnemyTank(detectRadius * 1.5f);
+        // 적 탱크 우선: 맵 어디에 있든 가장 가까운 적 탱크를 쫓는다. 탱크가 하나도 없을 때만 게이트를 공격한다
+        Transform target = FindEnemyTank(100000.0f);
         if (target == null)
         {
             float best = float.MaxValue;
@@ -393,8 +512,9 @@ public class AllyMover : MonoBehaviour
         // 상대 UFO를 만나면 멈추지 않고 포탄을 피하며 상하좌우로 움직이면서 공격한다
         if (airTarget)
         {
-            Vector3 vel = dodger.Step(transform.position, target, me.team, info.moveSpeed * speedScale * 1.2f);
-            transform.position += vel * Time.deltaTime;
+            Vector3 vel = dodger.Step(transform.position, target, me.team, info.moveSpeed * speedScale * 0.8f);
+            vel += FlyUtil.Separation(transform, me.team, 10.0f) * info.moveSpeed * speedScale * 0.5f;
+            transform.position = FlyUtil.ClampAboveGround(transform.position + vel * Time.deltaTime, 4.0f);
             Vector3 face = target.position - transform.position; face.y = 0;
             if (face.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(face), 180.0f * Time.deltaTime);
@@ -405,12 +525,17 @@ public class AllyMover : MonoBehaviour
         var p = transform.position;
         p.y = Mathf.MoveTowards(p.y, altitude, 10.0f * Time.deltaTime);
 
+        Vector3 desiredFly = Vector3.zero;
         if (flat.magnitude > info.stopDistance)
         {
             Vector3 dir = flat.normalized;
-            p += dir * info.moveSpeed * speedScale * Time.deltaTime;
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(dir), 180.0f * Time.deltaTime);
+            desiredFly = dir * info.moveSpeed * speedScale;
         }
-        transform.position = p;
+        // 같은 목표를 쫓는 아군 UFO끼리 겹치지 않게 서로 밀어낸다
+        desiredFly += FlyUtil.Separation(transform, me.team, 10.0f) * info.moveSpeed * speedScale;
+        flyVel = Vector3.MoveTowards(flyVel, Vector3.ClampMagnitude(desiredFly, info.moveSpeed * speedScale), 6.0f * Time.deltaTime);
+        p += flyVel * Time.deltaTime;
+        transform.position = FlyUtil.ClampAboveGround(p, 4.0f);
     }
 }

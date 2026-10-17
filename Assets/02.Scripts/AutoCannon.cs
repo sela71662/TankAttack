@@ -39,7 +39,7 @@ public class AutoCannon : MonoBehaviour
         }
 
         // 조준 방향은 포구가 아니라 회전 중심(barrel)에서 잡는다. 포구는 몸체와 같이 돌아서 가까운 적일수록 방향이 흔들린다
-        Vector3 aim = target.position + Vector3.up * 1.0f;
+        Vector3 aim = LeadPoint(target);
         Vector3 dir = aim - barrel.position;
         if (dir.sqrMagnitude < 0.01f) return;
 
@@ -55,6 +55,46 @@ public class AutoCannon : MonoBehaviour
         var go = Instantiate(projectilePrefab, muzzle, barrel.rotation);
         var p = go.GetComponent<Projectile>();
         if (p != null) p.Init(TeamConfig.playerTeam);
+    }
+
+    // 이동하는 적은 포탄이 도착할 시간만큼 앞쪽을 겨눈다 (목표 속도는 프레임 간 위치 변화로 추정)
+    Transform velTarget;
+    Vector3 lastTargetPos, targetVel;
+    float projectileSpeed;
+
+    Vector3 LeadPoint(Transform target)
+    {
+        Vector3 p = target.position;
+        if (target != velTarget)
+        {
+            velTarget = target;
+            lastTargetPos = p;
+            targetVel = Vector3.zero;
+        }
+        else if (Time.deltaTime > 0.0001f)
+        {
+            Vector3 v = (p - lastTargetPos) / Time.deltaTime;
+            lastTargetPos = p;
+            targetVel = Vector3.Lerp(targetVel, v, Mathf.Clamp01(5.0f * Time.deltaTime));
+        }
+
+        if (projectileSpeed <= 0)
+        {
+            var proj = projectilePrefab != null ? projectilePrefab.GetComponent<Projectile>() : null;
+            projectileSpeed = proj != null ? proj.speed : 0;
+        }
+        Vector3 aim = p + Vector3.up * 1.0f;
+        if (projectileSpeed <= 0) return aim;
+
+        // 도착 시간을 두 번 다시 계산해 정확도를 높인다
+        Vector3 flatVel = new Vector3(targetVel.x, 0, targetVel.z);
+        Vector3 lead = aim;
+        for (int i = 0; i < 2; i++)
+        {
+            float time = Vector3.Distance(barrel.position, lead) / projectileSpeed;
+            lead = aim + flatVel * time;
+        }
+        return lead;
     }
 
     // 범위 안의 가장 가까운 적 탱크 (구조물 제외)

@@ -10,6 +10,8 @@ public class AirDodger
     public float dodgeLookahead = 1.6f; // 이 시간(초) 안에 맞을 포탄만 피한다
     public float dodgeMissDistance = 5.0f; // 포탄이 이 거리 안으로 지나가면 피해야 한다고 본다
 
+    public float accel = 10.0f;         // 속도가 바뀌는 최대 가속도(m/s^2). 방향이 갑자기 꺾이지 않게 한다
+    Vector3 vel;                        // 지금 실제 속도
     Vector3 strafe;                     // 지금 옆으로(좌우/상하) 움직이는 방향
     float nextStrafeTime;
 
@@ -45,8 +47,9 @@ public class AirDodger
         Vector3 dodge = DodgeDirection(self, myTeam);
         if (dodge != Vector3.zero) move = dodge * 3.0f + move * 0.2f;
 
-        if (move.sqrMagnitude < 0.0001f) return Vector3.zero;
-        return move.normalized * speed;
+        Vector3 desired = move.sqrMagnitude < 0.0001f ? Vector3.zero : move.normalized * speed;
+        vel = Vector3.MoveTowards(vel, desired, accel * Time.deltaTime);
+        return vel;
     }
 
     // 자기를 맞출 것 같은 가장 급한 적 포탄을 찾아 그 궤적에서 벗어나는 방향을 돌려준다. 없으면 zero

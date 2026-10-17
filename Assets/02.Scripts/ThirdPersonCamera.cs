@@ -148,8 +148,6 @@ public class ThirdPersonCamera : MonoBehaviour
             if (sp.z <= 0) return; // 조준점이 카메라 뒤면 그리지 않는다 (화면 중앙으로 튀지 않게)
             cx = sp.x; cy = Screen.height - sp.y;
         }
-        GUI.color = new Color(1f, 1f, 1f, 0.9f);
-        GUI.DrawTexture(new Rect(cx - 8, cy - 1, 16, 2), Texture2D.whiteTexture);
-        GUI.DrawTexture(new Rect(cx - 1, cy - 8, 2, 16), Texture2D.whiteTexture);
+        UiKit.Crosshair(cx, cy);
     }
 }

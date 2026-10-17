@@ -32,16 +32,16 @@ public class ShopUI : MonoBehaviour
     void Summon(TankKind kind)
     {
         if (allySpawner == null) return;
-        if (!allySpawner.CanBuy) { Toast("Ally limit reached"); return; }
-        if (!GoldWallet.TrySpend(GoldWallet.SummonCost(kind))) { Toast("Not enough gold"); return; }
+        if (!allySpawner.CanBuy) { Toast("아군 수 한도에 도달했습니다"); return; }
+        if (!GoldWallet.TrySpend(GoldWallet.SummonCost(kind))) { Toast("골드가 부족합니다"); return; }
         allySpawner.Spawn(kind);
     }
 
     void RepairCore()
     {
         if (coreHealth == null || coreHealth.IsDead) return;
-        if (coreHealth.hp >= coreHealth.maxHp) { Toast("Core is at full health"); return; }
-        if (!GoldWallet.TrySpend(GoldWallet.repairCost)) { Toast("Not enough gold"); return; }
+        if (coreHealth.hp >= coreHealth.maxHp) { Toast("코어 체력이 가득 찼습니다"); return; }
+        if (!GoldWallet.TrySpend(GoldWallet.repairCost)) { Toast("골드가 부족합니다"); return; }
         coreHealth.Heal(coreHealth.maxHp * GoldWallet.repairRatio);
     }
 
@@ -49,47 +49,50 @@ public class ShopUI : MonoBehaviour
     {
         if (!Active || MapView.IsOpen) return;
 
-        float s = Screen.height / 1080f;
-        float w = 150 * s, h = 72 * s, gap = 6 * s;
+        float s = UiKit.S;
+        float w = 140 * s, h = 82 * s, gap = 8 * s;
         int count = summonKinds.Length + 1;
         float total = count * w + (count - 1) * gap;
         float x = (Screen.width - total) * 0.5f;
-        float y = Screen.height - h - 14 * s;
+        float y = Screen.height - h - 16 * s;
 
         for (int i = 0; i < summonKinds.Length; i++)
         {
             var kind = summonKinds[i];
             int cost = GoldWallet.SummonCost(kind);
-            if (Button(ref x, y, w, h, gap, s, $"{i + 1}", kind.ToString(), $"{cost}G", GoldWallet.Gold >= cost && allySpawner != null && allySpawner.CanBuy))
+            if (Card(ref x, y, w, h, gap, $"{i + 1}", kind.ToString(), cost, GoldWallet.Gold >= cost && allySpawner != null && allySpawner.CanBuy))
                 Summon(kind);
         }
-        if (Button(ref x, y, w, h, gap, s, "R", "Repair Core", $"{GoldWallet.repairCost}G",
-                   GoldWallet.Gold >= GoldWallet.repairCost && coreHealth != null && coreHealth.hp < coreHealth.maxHp))
+        if (Card(ref x, y, w, h, gap, "R", "Repair Core", GoldWallet.repairCost,
+                 GoldWallet.Gold >= GoldWallet.repairCost && coreHealth != null && coreHealth.hp < coreHealth.maxHp))
             RepairCore();
     }
 
-    // 살 수 있는 버튼은 밝게, 골드가 모자라거나 더 살 수 없으면 어둡게 그린다 (눌러도 이유를 알려 준다)
-    static bool Button(ref float x, float y, float w, float h, float gap, float s, string key, string label, string price, bool enabled)
+    // 키 배지, 이름, 가격 칩이 있는 카드. 살 수 있으면 밝게, 골드가 모자라거나 더 살 수 없으면 어둡게 그린다 (눌러도 이유를 알려 준다)
+    static bool Card(ref float x, float y, float w, float h, float gap, string key, string label, int price, bool enabled)
     {
+        float s = UiKit.S;
         var r = new Rect(x, y, w, h);
         x += w + gap;
 
-        var old = GUI.color;
-        GUI.color = enabled ? new Color(1f, 1f, 1f, 0.95f) : new Color(0.55f, 0.55f, 0.55f, 0.85f);
-        bool clicked = GUI.Button(r, GUIContent.none);
-        GUI.color = old;
+        bool hover = r.Contains(Event.current.mousePosition);
+        var bg = enabled ? new Color(0.06f, 0.10f, 0.16f, hover ? 0.95f : 0.85f) : new Color(0.05f, 0.06f, 0.08f, 0.78f);
+        UiKit.Panel(r, 12, bg);
+        if (enabled) UiKit.Outline(r, new Color(UiKit.Accent.r, UiKit.Accent.g, UiKit.Accent.b, hover ? 0.9f : 0.35f), Mathf.Max(1f, 1.5f * s), 12 * s);
 
-        var keyStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * s), fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperLeft };
-        var nameStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(17 * s), fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
-        var priceStyle = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(18 * s), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerCenter };
+        // 키 배지
+        var badge = new Rect(r.x + 8 * s, r.y + 8 * s, 28 * s, 24 * s);
+        UiKit.Round(badge, enabled ? new Color(UiKit.Accent.r, UiKit.Accent.g, UiKit.Accent.b, 0.9f) : new Color(0.4f, 0.4f, 0.45f, 0.8f), 7 * s);
+        UiKit.Label(badge, key, 15, new Color(0.03f, 0.05f, 0.08f), TextAnchor.MiddleCenter);
 
-        keyStyle.normal.textColor = new Color(0.65f, 0.85f, 1f);
-        nameStyle.normal.textColor = enabled ? Color.white : new Color(0.75f, 0.75f, 0.75f);
-        priceStyle.normal.textColor = enabled ? new Color(1f, 0.85f, 0.25f) : new Color(0.7f, 0.6f, 0.3f);
+        Color nameColor = enabled ? Color.white : new Color(0.62f, 0.64f, 0.68f);
+        UiKit.Label(new Rect(r.x + 40 * s, r.y + 6 * s, w - 46 * s, 28 * s), label, 16, nameColor, TextAnchor.MiddleLeft);
 
-        GUI.Label(new Rect(r.x + 6 * s, r.y + 3 * s, r.width, r.height), $"[{key}]", keyStyle);
-        GUI.Label(new Rect(r.x, r.y + 18 * s, r.width, r.height), label, nameStyle);
-        GUI.Label(new Rect(r.x, r.y, r.width, r.height - 4 * s), price, priceStyle);
-        return clicked;
+        // 가격 칩
+        var chip = new Rect(r.x + 8 * s, r.yMax - 34 * s, w - 16 * s, 26 * s);
+        UiKit.Pill(chip, new Color(0f, 0f, 0f, 0.35f));
+        UiKit.Label(chip, $"{price} G", 17, enabled ? UiKit.Gold : new Color(0.65f, 0.58f, 0.34f));
+
+        return GUI.Button(r, GUIContent.none, GUIStyle.none);
     }
 }

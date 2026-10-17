@@ -136,6 +136,13 @@ public class AITurretCtrl : MonoBehaviour
         return !blocked;
     }
 
+    bool CanAttackStructures()
+    {
+        if (TeamConfig.IsAlly(me.team)) return true;
+        var mover = GetComponent<EnemyMover>();
+        return mover == null || mover.CrossedBridge;   // 이동기가 없는 UFO 등은 제한하지 않는다
+    }
+
     // 보이는 적 탱크를 우선하고, 없을 때만 구조물을 고른다
     TeamMember FindNearestEnemy()
     {
@@ -144,6 +151,8 @@ public class AITurretCtrl : MonoBehaviour
         foreach (var t in TeamMember.All)
         {
             if (!me.IsEnemy(t)) continue;
+            // 지상 적은 다리를 다 건너 섬에 들어오기 전에는 코어, 건물 같은 구조물을 공격하지 못한다
+            if (t.isStructure && !CanAttackStructures()) continue;
             float d = (t.transform.position - transform.position).sqrMagnitude;
             if (t.isStructure ? d >= structDist : d >= tankDist) continue;
             // 목표 고르기는 포탑 회전 중심에서 본다 (포구는 아직 다른 쪽을 향하고 있을 수 있다)

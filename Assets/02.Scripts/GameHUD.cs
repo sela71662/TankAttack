@@ -18,10 +18,13 @@ public class GameHUD : MonoBehaviour
     const float PopupLife = 1.4f;
     const float ToastLife = 2.2f;
 
-    static readonly Color Panel = new Color(0.05f, 0.07f, 0.1f, 0.72f);
-    static readonly Color GoldColor = new Color(1.0f, 0.82f, 0.2f);
+    static readonly Color GoldColor = UiKit.Gold;
 
-    static readonly string[] itemNames = { "ATTACK UP", "FIRE RATE UP", "HEAL", "SPEED UP" };
+    // 막대가 부드럽게 차고 줄도록 화면에 보이는 값을 따로 둔다 (coreTrail은 줄어들기 전 값의 잔상)
+    float coreShown = 1f, coreTrail = 1f, gaugeShown;
+    float endShownAt = -1f;
+
+    static readonly string[] itemNames = { "공격력 증가", "연사 속도 증가", "체력 회복", "이동 속도 증가" };
 
     // Resources/ItemIcons/<이름>.png. 없으면 null이라 색 칸으로 대신한다
     static readonly Dictionary<string, Texture2D> iconCache = new Dictionary<string, Texture2D>();
@@ -40,7 +43,7 @@ public class GameHUD : MonoBehaviour
     {
         var tex = Icon(name);
         if (tex != null) GUI.DrawTexture(r, tex, ScaleMode.ScaleToFit, true);
-        else Fill(r, fallback);
+        else UiKit.Round(r, fallback, r.height * 0.25f);
     }
 
     void Awake()
@@ -57,7 +60,7 @@ public class GameHUD : MonoBehaviour
     public static void Pickup(ItemType type, float duration, float healRatio)
     {
         if (Instance == null) return;
-        string text = type == ItemType.Heal ? $"HEAL +{healRatio * 100:F0}%" : $"{itemNames[(int)type]}  {duration:F0}s";
+        string text = type == ItemType.Heal ? $"체력 회복 +{healRatio * 100:F0}%" : $"{itemNames[(int)type]}  {duration:F0}초";
         Instance.AddToast(text, ItemPickup.ColorOf(type), type.ToString());
     }
 
@@ -89,46 +92,20 @@ public class GameHUD : MonoBehaviour
         }
         goldPops.RemoveAll(p => Time.unscaledTime - p.time > PopupLife);
         toasts.RemoveAll(p => Time.unscaledTime - p.time > ToastLife);
-    }
 
-    float S => Screen.height / 1080f;
-
-    GUIStyle Style(int size, TextAnchor anchor, FontStyle fs = FontStyle.Bold)
-    {
-        return new GUIStyle(GUI.skin.label)
+        float dt = Time.unscaledDeltaTime;
+        float k = 1f - Mathf.Exp(-10f * dt);
+        if (waves != null && waves.coreHealth != null && waves.coreHealth.maxHp > 0)
         {
-            fontSize = Mathf.Max(10, Mathf.RoundToInt(size * S)),
-            alignment = anchor,
-            fontStyle = fs,
-            wordWrap = false,
-            clipping = TextClipping.Overflow
-        };
+            float ratio = Mathf.Clamp01(waves.coreHealth.hp / waves.coreHealth.maxHp);
+            coreShown = Mathf.Lerp(coreShown, ratio, k);
+            coreTrail = coreTrail > ratio ? Mathf.MoveTowards(coreTrail, ratio, 0.25f * dt) : ratio;
+        }
+        float gt = AllyUpgrades.CanUpgrade ? (float)AllyUpgrades.Progress / AllyUpgrades.KillsPerLevel : 1f;
+        gaugeShown = Mathf.Lerp(gaugeShown, gt, k);
     }
 
-    static void Fill(Rect r, Color c)
-    {
-        var old = GUI.color;
-        GUI.color = c;
-        GUI.DrawTexture(r, Texture2D.whiteTexture);
-        GUI.color = old;
-    }
-
-    static void Bar(Rect r, float ratio, Color fill)
-    {
-        Fill(r, new Color(0, 0, 0, 0.6f));
-        Fill(new Rect(r.x + 1, r.y + 1, (r.width - 2) * Mathf.Clamp01(ratio), r.height - 2), fill);
-    }
-
-    // 그림자를 깔아 어떤 배경에서도 읽히게 한다
-    static void Text(Rect r, string text, GUIStyle style, Color color)
-    {
-        var old = GUI.color;
-        GUI.color = new Color(0, 0, 0, 0.8f * color.a);
-        GUI.Label(new Rect(r.x + 1.5f, r.y + 1.5f, r.width, r.height), text, style);
-        GUI.color = color;
-        GUI.Label(r, text, style);
-        GUI.color = old;
-    }
+    float S => UiKit.S;
 
     void OnGUI()
     {
@@ -143,135 +120,183 @@ public class GameHUD : MonoBehaviour
     // 위쪽 가운데: 웨이브 진행과 코어 체력
     void DrawWaveAndCore()
     {
-        float w = 460 * S, h = 100 * S;
-        var box = new Rect((Screen.width - w) * 0.5f, 10 * S, w, h);
-        Fill(box, Panel);
+        float w = 540 * S, h = 108 * S;
+        var box = new Rect((Screen.width - w) * 0.5f, 12 * S, w, h);
+        UiKit.Panel(box, 14);
 
-        string line = waves.state switch
+        var row = new Rect(box.x + 20 * S, box.y + 8 * S, w - 40 * S, 38 * S);
+        switch (waves.state)
         {
-            WaveManager.State.Waiting => "READY",
-            WaveManager.State.Intermission => $"NEXT WAVE IN {Mathf.CeilToInt(waves.intermissionLeft)}s",
-            WaveManager.State.Victory => "VICTORY",
-            WaveManager.State.Defeat => "DEFEAT",
-            _ => $"WAVE {waves.currentWave}/{waves.waves.Count}    ENEMIES {waves.AliveCount}"
-        };
-        Text(new Rect(box.x, box.y + 4 * S, w, 34 * S), line, Style(26, TextAnchor.MiddleCenter), Color.white);
+            case WaveManager.State.Waiting:
+                UiKit.Label(row, "READY", 28, UiKit.Accent);
+                break;
+            case WaveManager.State.Intermission:
+                UiKit.Label(row, $"다음 웨이브까지  {Mathf.CeilToInt(waves.intermissionLeft)}초", 24, Color.white);
+                break;
+            case WaveManager.State.Victory:
+                UiKit.Label(row, "VICTORY", 30, GoldColor);
+                break;
+            case WaveManager.State.Defeat:
+                UiKit.Label(row, "DEFEAT", 30, UiKit.Danger);
+                break;
+            default:
+                UiKit.Label(row, "WAVE", 15, UiKit.Dim, TextAnchor.MiddleLeft);
+                UiKit.Label(new Rect(row.x + 58 * S, row.y - 2 * S, 160 * S, row.height), $"{waves.currentWave} / {waves.waves.Count}", 30, Color.white, TextAnchor.MiddleLeft);
+                UiKit.Label(new Rect(row.xMax - 150 * S, row.y, 76 * S, row.height), "ENEMIES", 15, UiKit.Dim, TextAnchor.MiddleRight);
+                UiKit.Label(new Rect(row.xMax - 66 * S, row.y - 2 * S, 66 * S, row.height), $"{waves.AliveCount}", 30, new Color(1f, 0.55f, 0.45f), TextAnchor.MiddleRight);
+                break;
+        }
 
         var core = waves.coreHealth;
         if (core != null)
         {
-            float ratio = core.maxHp > 0 ? core.hp / core.maxHp : 0;
-            var bar = new Rect(box.x + 16 * S, box.y + 46 * S, w - 32 * S, 30 * S);
-            Bar(bar, ratio, Color.Lerp(new Color(0.95f, 0.2f, 0.15f), new Color(0.2f, 0.9f, 0.9f), ratio));
-            Text(bar, $"CORE  {Mathf.CeilToInt(core.hp)} / {Mathf.CeilToInt(core.maxHp)}", Style(15, TextAnchor.MiddleCenter), Color.white);
+            var bar = new Rect(box.x + 20 * S, box.y + 56 * S, w - 40 * S, 30 * S);
+            Color lo = new Color(0.95f, 0.25f, 0.2f), hi = new Color(0.25f, 0.9f, 0.9f);
+            UiKit.Bar(bar, coreShown, Color.Lerp(lo, hi, coreShown), coreTrail);
+            UiKit.Label(bar, $"CORE   {Mathf.CeilToInt(core.hp)} / {Mathf.CeilToInt(core.maxHp)}", 16, Color.white);
+        }
+        // 웨이브 사이 대기 시간은 얇은 막대로도 보여 준다
+        if (waves.state == WaveManager.State.Intermission && waves.betweenWaves > 0)
+        {
+            var t = new Rect(box.x + 20 * S, box.y + 94 * S, w - 40 * S, 6 * S);
+            UiKit.Bar(t, waves.intermissionLeft / waves.betweenWaves, UiKit.Accent);
         }
     }
 
     // 오른쪽 위: 골드와 늘고 준 양
     void DrawGold()
     {
-        float w = 230 * S, h = 52 * S;
-        var box = new Rect(Screen.width - w - 14 * S, 10 * S, w, h);
-        Fill(box, Panel);
+        float w = 250 * S, h = 58 * S;
+        var box = new Rect(Screen.width - w - 16 * S, 12 * S, w, h);
+        UiKit.Panel(box, 14);
 
-        // 동전 아이콘
         float d = 40 * S;
-        var coin = new Rect(box.x + 10 * S, box.y + (h - d) * 0.5f, d, d);
+        var coin = new Rect(box.x + 14 * S, box.y + (h - d) * 0.5f, d, d);
         DrawIcon(coin, "Coin", GoldColor);
 
-        Text(new Rect(coin.xMax + 10 * S, box.y, w - d - 34 * S, h), $"{GoldWallet.Gold}", Style(30, TextAnchor.MiddleLeft), GoldColor);
+        UiKit.Label(new Rect(coin.xMax + 12 * S, box.y, w - d - 40 * S, h), $"{GoldWallet.Gold:N0}", 30, GoldColor, TextAnchor.MiddleLeft);
 
         for (int i = 0; i < goldPops.Count; i++)
         {
             var p = goldPops[i];
             float t = (Time.unscaledTime - p.time) / PopupLife;
             var c = p.color; c.a = 1f - t * t;
-            Text(new Rect(box.x, box.yMax + 4 * S + t * 22 * S + i * 20 * S, w - 14 * S, 26 * S), p.text, Style(22, TextAnchor.MiddleRight), c);
+            UiKit.Label(new Rect(box.x, box.yMax + 6 * S + t * 22 * S + i * 22 * S, w - 16 * S, 26 * S), p.text, 22, c, TextAnchor.MiddleRight);
         }
     }
 
-    // 왼쪽 아래: 플레이어 체력, 아군 강화 단계, 아이템 효과 남은 시간
+    // 왼쪽 아래: 아군 강화 단계, 아이템 효과 남은 시간 (플레이어 체력은 탱크 위 체력바에 있다)
     void DrawPlayerAndBuffs()
     {
-        var player = PlayerTankController.Instance;
-        if (player == null) return;
+        var player = PlayerTankController.Instance; // 죽어서 부활을 기다리는 동안은 null이다
 
-        float w = 300 * S, x = 14 * S;
-        float y = Screen.height - 150 * S;
+        float w = 330 * S, x = 16 * S;
+        float ph = 112 * S;
+        float y = Screen.height - ph - 16 * S;
 
-        var buffs = player.GetComponent<PlayerBuffs>();
-        if (buffs != null)
-        {
-            foreach (ItemType t in new[] { ItemType.Damage, ItemType.FireRate, ItemType.Speed })
-            {
-                float left = buffs.Remaining(t);
-                if (left <= 0) continue;
-                y -= 40 * S;
-                var row = new Rect(x, y, w, 34 * S);
-                Fill(row, Panel);
-                var col = ItemPickup.ColorOf(t);
-                Fill(new Rect(row.x, row.y, 46 * S, row.height), col * 0.35f);
-                DrawIcon(new Rect(row.x + 4 * S, row.y + 1 * S, 38 * S, row.height - 2 * S), t.ToString(), col);
-                Bar(new Rect(row.x + 54 * S, row.y + 10 * S, w - 120 * S, 14 * S), left / buffs.duration, col);
-                Text(new Rect(row.xMax - 58 * S, row.y, 52 * S, row.height), $"{left:F0}s", Style(16, TextAnchor.MiddleRight), Color.white);
-            }
-        }
+        // 강화 카드
+        var panel = new Rect(x, y, w, ph);
+        UiKit.Panel(panel, 14);
+        UiKit.Label(new Rect(panel.x + 16 * S, panel.y + 8 * S, 190 * S, 26 * S), "ALLY UPGRADE", 15, UiKit.Dim, TextAnchor.MiddleLeft);
+        var pill = new Rect(panel.xMax - 96 * S, panel.y + 9 * S, 80 * S, 24 * S);
+        UiKit.Pill(pill, new Color(UiKit.Accent.r, UiKit.Accent.g, UiKit.Accent.b, 0.22f));
+        UiKit.Outline(pill, new Color(UiKit.Accent.r, UiKit.Accent.g, UiKit.Accent.b, 0.7f), Mathf.Max(1f, S), pill.height * 0.5f);
+        UiKit.Label(pill, $"Lv {AllyUpgrades.Level} / {AllyUpgrades.MaxLevel}", 14, UiKit.Accent);
 
-        // 플레이어 체력은 탱크 위의 체력바 안에 표시한다 (HealthBar.textInside)
-        float by = Screen.height - 160 * S;
-        var panel = new Rect(x, by, w, 82 * S);
-        Fill(panel, Panel);
-        string up = $"ALLY UPGRADE  Lv {AllyUpgrades.Level}/{AllyUpgrades.MaxLevel}";
-        Text(new Rect(panel.x + 10 * S, panel.y + 4 * S, w - 20 * S, 24 * S), up, Style(15, TextAnchor.MiddleLeft), new Color(0.8f, 0.9f, 1f));
-        // 적 처치로 차오르는 레벨 게이지
-        var gauge = new Rect(panel.x + 10 * S, panel.y + 30 * S, w - 20 * S, 22 * S);
+        var gauge = new Rect(panel.x + 16 * S, panel.y + 40 * S, w - 32 * S, 24 * S);
         var gaugeColor = new Color(1f, 0.8f, 0.2f);
-        if (AllyUpgrades.CanUpgrade)
-        {
-            Bar(gauge, (float)AllyUpgrades.Progress / AllyUpgrades.KillsPerLevel, gaugeColor);
-            Text(gauge, $"{AllyUpgrades.Progress} / {AllyUpgrades.KillsPerLevel}", Style(14, TextAnchor.MiddleCenter), Color.white);
-        }
-        else
-        {
-            Bar(gauge, 1f, gaugeColor);
-            Text(gauge, "MAX", Style(14, TextAnchor.MiddleCenter), Color.white);
-        }
-        // 다음 레벨에서 늘어나는 강화 보상
+        UiKit.Bar(gauge, gaugeShown, gaugeColor);
+        UiKit.Label(gauge, AllyUpgrades.CanUpgrade ? $"{AllyUpgrades.Progress} / {AllyUpgrades.KillsPerLevel}" : "MAX", 14, Color.white);
+
         string reward = AllyUpgrades.CanUpgrade
-            ? $"Lv{AllyUpgrades.Level + 1} : 공격력 +15%, 체력 +20%"
+            ? $"NEXT : Lv{AllyUpgrades.Level + 1} 공격력 +15%, 체력 +20%"
             : "최대 레벨";
-        Text(new Rect(panel.x + 10 * S, panel.y + 54 * S, w - 20 * S, 24 * S), reward, Style(13, TextAnchor.MiddleLeft), new Color(1f, 0.9f, 0.5f));
+        UiKit.Label(new Rect(panel.x + 16 * S, panel.y + 72 * S, w - 32 * S, 28 * S), reward, 15, new Color(1f, 0.9f, 0.55f), TextAnchor.MiddleLeft);
+
+        // 남은 목숨: 강화 카드 바로 위
+        float ly = y - 8 * S - 38 * S;
+        var lives = new Rect(x, ly, w, 38 * S);
+        UiKit.Panel(lives, 12);
+        UiKit.Label(new Rect(lives.x + 16 * S, lives.y, 90 * S, lives.height), "LIVES", 15, UiKit.Dim, TextAnchor.MiddleLeft);
+        int max = Mathf.Max(PlayerSpawner.MaxLives, 1);
+        for (int i = 0; i < max; i++)
+        {
+            bool alive = i < PlayerSpawner.Lives;
+            Color hc = alive ? new Color(1f, 0.28f, 0.32f) : new Color(0.28f, 0.30f, 0.36f, 0.9f);
+            UiKit.Heart(new Vector2(lives.x + 118 * S + i * 36 * S, lives.y + lives.height * 0.5f), 24 * S, hc);
+        }
+
+        // 아이템 효과: 목숨 행 위로 쌓는다
+        var buffs = player != null ? player.GetComponent<PlayerBuffs>() : null;
+        if (buffs == null) return;
+        float by = ly - 8 * S;
+        foreach (ItemType t in new[] { ItemType.Damage, ItemType.FireRate, ItemType.Speed })
+        {
+            float left = buffs.Remaining(t);
+            if (left <= 0) continue;
+            by -= 46 * S;
+            var row = new Rect(x, by, w, 40 * S);
+            UiKit.Panel(row, 12);
+            var col = ItemPickup.ColorOf(t);
+            UiKit.Round(new Rect(row.x + 4 * S, row.y + 4 * S, 44 * S, row.height - 8 * S), new Color(col.r, col.g, col.b, 0.28f), 8 * S);
+            DrawIcon(new Rect(row.x + 6 * S, row.y + 4 * S, 40 * S, row.height - 8 * S), t.ToString(), col);
+            UiKit.Label(new Rect(row.x + 58 * S, row.y + 2 * S, 170 * S, 18 * S), itemNames[(int)t], 13, UiKit.Dim, TextAnchor.MiddleLeft);
+            UiKit.Bar(new Rect(row.x + 58 * S, row.y + 23 * S, w - 140 * S, 10 * S), left / buffs.duration, col);
+            UiKit.Label(new Rect(row.xMax - 70 * S, row.y, 58 * S, row.height), $"{left:F0}초", 16, Color.white, TextAnchor.MiddleRight);
+        }
     }
 
-    // 가운데 아래쪽에 아이템 획득 같은 짧은 알림을 쌓는다
+    // 가운데 아래쪽에 아이템 획득 같은 짧은 알림을 알약 모양으로 쌓는다
     void DrawToasts()
     {
-        float y = Screen.height * 0.62f;
+        float y = Screen.height * 0.64f;
         for (int i = toasts.Count - 1; i >= 0; i--)
         {
             var p = toasts[i];
             float t = (Time.unscaledTime - p.time) / ToastLife;
-            var c = p.color; c.a = Mathf.Clamp01(1f - Mathf.Max(0, t - 0.7f) / 0.3f);
-            Text(new Rect(0, y, Screen.width, 40 * S), p.text, Style(26, TextAnchor.MiddleCenter), c);
-            if (p.icon != null && Icon(p.icon) != null)
-            {
-                // 글자 왼쪽에 아이콘. 글자 폭을 재서 붙인다
-                float tw = Style(26, TextAnchor.MiddleCenter).CalcSize(new GUIContent(p.text)).x;
-                var old = GUI.color;
-                GUI.color = new Color(1, 1, 1, c.a);
-                GUI.DrawTexture(new Rect((Screen.width - tw) * 0.5f - 46 * S, y - 2 * S, 42 * S, 42 * S), Icon(p.icon), ScaleMode.ScaleToFit, true);
-                GUI.color = old;
-            }
-            y -= 44 * S;
+            float a = Mathf.Clamp01(t / 0.08f) * Mathf.Clamp01(1f - Mathf.Max(0, t - 0.75f) / 0.25f);
+            float rise = (1f - Mathf.Clamp01(t / 0.15f)) * 14 * S; // 아래에서 살짝 올라오며 나타난다
+
+            bool hasIcon = p.icon != null && Icon(p.icon) != null;
+            float tw = UiKit.TextWidth(p.text, 24) + 2 * S;
+            float iw = hasIcon ? 44 * S : 0;
+            float pw = tw + iw + 44 * S, ph = 46 * S;
+            var r = new Rect((Screen.width - pw) * 0.5f, y + rise, pw, ph);
+
+            var old = GUI.color;
+            GUI.color = new Color(1, 1, 1, a);
+            UiKit.Panel(r, 23, new Color(0.04f, 0.06f, 0.10f, 0.85f));
+            UiKit.Round(new Rect(r.x + 5 * S, r.y + 5 * S, 5 * S, r.height - 10 * S), new Color(p.color.r, p.color.g, p.color.b, a), 3 * S);
+            if (hasIcon)
+                GUI.DrawTexture(new Rect(r.x + 20 * S, r.y + 2 * S, 42 * S, 42 * S), Icon(p.icon), ScaleMode.ScaleToFit, true);
+            GUI.color = old;
+
+            var c = p.color; c.a = a;
+            UiKit.Label(new Rect(r.x + 20 * S + iw, r.y, tw + 8 * S, r.height), p.text, 24, c, TextAnchor.MiddleLeft);
+            y -= 54 * S;
         }
     }
 
     void DrawEndBanner()
     {
-        if (waves.state != WaveManager.State.Victory && waves.state != WaveManager.State.Defeat) return;
         bool win = waves.state == WaveManager.State.Victory;
-        Fill(new Rect(0, Screen.height * 0.36f, Screen.width, 120 * S), new Color(0, 0, 0, 0.6f));
-        Text(new Rect(0, Screen.height * 0.36f, Screen.width, 120 * S), win ? "VICTORY" : "DEFEAT",
-             Style(72, TextAnchor.MiddleCenter), win ? GoldColor : new Color(1f, 0.35f, 0.3f));
+        if (!win && waves.state != WaveManager.State.Defeat) { endShownAt = -1f; return; }
+        if (endShownAt < 0) endShownAt = Time.unscaledTime;
+        float a = Mathf.Clamp01((Time.unscaledTime - endShownAt) / 0.5f);
+
+        Color accent = win ? GoldColor : UiKit.Danger;
+        float h = 170 * S, y = Screen.height * 0.34f;
+        var band = new Rect(0, y, Screen.width, h);
+        var old = GUI.color;
+        GUI.color = new Color(1, 1, 1, a);
+        UiKit.Round(band, new Color(0, 0, 0, 0.68f), 0);
+        UiKit.Round(new Rect(0, y, Screen.width, 3 * S), accent, 0);
+        UiKit.Round(new Rect(0, y + h - 3 * S, Screen.width, 3 * S), accent, 0);
+        GUI.color = old;
+
+        var c = accent; c.a = a;
+        UiKit.Label(new Rect(0, y + 14 * S, Screen.width, 100 * S), win ? "VICTORY" : "DEFEAT", 84, c);
+        UiKit.Label(new Rect(0, y + 112 * S, Screen.width, 40 * S), win ? "모든 게이트를 파괴하고 코어를 지켜냈습니다" : "코어가 파괴되었습니다",
+                    24, new Color(1, 1, 1, a));
     }
 }

@@ -107,6 +107,9 @@ public class EnemyMover : MonoBehaviour
 
         // 앞에 다른 탱크가 있으면 겹치지 않도록 멈춰서 기다린다
         // (MegaBall은 옆으로 비켜 있으면 앞차를 추월한다)
+        // 앞쪽에 보이는 상대 탱크가 사거리 안에 들어오면 더 다가가지 않고 멈춰서 사격한다 (Light는 포가 없어 계속 접근)
+        if (info.kind != TankKind.Light && EngagedAhead(new Vector3(to.x, 0, to.z)))
+            return;
         bool overtaking = wander && Mathf.Abs(weaver.Lateral) > 1.5f;
         if (!overtaking && IsBlockedAhead(new Vector3(to.x, 0, to.z)))
             return;
@@ -124,6 +127,47 @@ public class EnemyMover : MonoBehaviour
         Vector3 flat = new Vector3(to.x, 0, to.z);
         if (flat.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat), routeTurnSpeed * Time.deltaTime);
+    }
+
+    public float routeHoldMax = 28.0f;     // 경로 위에서 멈추는 거리의 상한 (종류와 상관없이 같은 지점에서 멈춘다)
+    public float routeEngageMargin = 8.0f; // 경로 위에서 상대 탱크가 (stopDistance + 이 값) 안이면 멈춰서 사격한다
+    float nextEngageCheck;
+    bool engaged;
+
+    bool EngagedAhead(Vector3 flatDir)
+    {
+        if (Time.time < nextEngageCheck) return engaged;
+        nextEngageCheck = Time.time + 0.3f;
+        engaged = false;
+        if (flatDir.sqrMagnitude < 0.0001f) return false;
+        flatDir.Normalize();
+
+        float reach = Mathf.Min(info.stopDistance + routeEngageMargin, routeHoldMax);
+        foreach (var t in TeamMember.All)
+        {
+            if (t.isStructure || !me.IsEnemy(t)) continue;
+            var ti = t.GetComponent<TankInfo>();
+            if (ti != null && ti.flying) continue;
+            Vector3 d = t.transform.position - transform.position;
+            d.y = 0;
+            if (d.sqrMagnitude > reach * reach || Vector3.Dot(flatDir, d.normalized) < 0.0f) continue;
+
+            // 지형이나 소품에 가려 서로 못 보면 멈추지 않는다 (교착 방지). 탱크는 시선을 막지 않는다
+            Vector3 from = transform.position + Vector3.up * 1.5f;
+            Vector3 to = t.transform.position + Vector3.up * 1.2f;
+            Vector3 dir = to - from;
+            float dist = dir.magnitude;
+            bool blocked = false;
+            foreach (var h in Physics.RaycastAll(from, dir / dist, dist, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.collider.transform.IsChildOf(transform) || h.collider.transform.IsChildOf(t.transform)) continue;
+                if (h.collider.GetComponentInParent<TeamMember>() != null) continue;
+                blocked = true;
+                break;
+            }
+            if (!blocked) { engaged = true; break; }
+        }
+        return engaged;
     }
 
     // 진행 방향 앞쪽(약 60도 안)에 다른 탱크가 gap 거리 안에 있으면 막힌 것으로 본다.
@@ -194,7 +238,13 @@ public class EnemyMover : MonoBehaviour
             return;
         }
 
-        Transform target = info.PrefersCore ? null : FindNearbyEnemyTank();
+        // 아군 탱크 우선형은 한 번 정한 목표가 살아 있는 동안 바꾸지 않는다 (목표가 번갈아 바뀌며 흔들리는 것 방지)
+        Transform target = null;
+        if (!info.PrefersCore)
+        {
+            if (huntTarget == null || !huntTarget.gameObject.activeInHierarchy) huntTarget = FindNearbyEnemyTank();
+            target = huntTarget;
+        }
         if (target == null) target = approach;
         if (target == null) return;
 
@@ -203,6 +253,8 @@ public class EnemyMover : MonoBehaviour
         if (NavUtil.SampleNearest(target.position, 15.0f, out NavMeshHit hit))
             agent.SetDestination(hit.position);
     }
+
+    Transform huntTarget;
 
     Transform FindNearbyEnemyTank()
     {
