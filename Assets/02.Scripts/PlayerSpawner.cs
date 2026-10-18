@@ -15,6 +15,11 @@ public class PlayerSpawner : MonoBehaviour
 
     public GameObject Current { get; private set; }
 
+    void Awake()
+    {
+        if (GameFlow.BackgroundOnly) enabled = false; // 인트로 배경에서는 플레이어를 만들지 않는다
+    }
+
     void Start()
     {
         Lives = MaxLives = maxLives;
@@ -41,7 +46,7 @@ public class PlayerSpawner : MonoBehaviour
         {
             // 목숨을 다 썼다: 부활하지 않고 패배
             GameHUD.Toast("목숨을 모두 잃었습니다");
-            if (waves != null) waves.Defeat();
+            if (waves != null) waves.Defeat(WaveManager.DefeatReason.PlayerDead);
             return;
         }
         GameHUD.Toast($"목숨 {Lives}개 남음");

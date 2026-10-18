@@ -79,13 +79,16 @@ public static class AllyUpgrades
     public const int KillsPerLevel = 8;      // 적을 이만큼 처치할 때마다 한 레벨 오른다
     public static int Progress { get; private set; } // 현재 레벨 게이지에 쌓인 처치 수
 
-    public static void Reset() { Level = 0; Progress = 0; }
+    public static int TotalKills { get; private set; } // 지금까지 처치한 적 수 (패배 화면 통계용)
+
+    public static void Reset() { Level = 0; Progress = 0; TotalKills = 0; }
     public static bool CanUpgrade => Level < MaxLevel;
     public static void LevelUp() { if (CanUpgrade) Level++; }
 
     // 적 처치 1회. 게이지가 차면 레벨이 오르고 이미 있는 아군 탱크의 최대 체력도 올린다
     public static void AddKill()
     {
+        TotalKills++;
         if (!CanUpgrade) return;
         Progress++;
         if (Progress < KillsPerLevel) return;

@@ -280,7 +280,7 @@ public class GameHUD : MonoBehaviour
     void DrawEndBanner()
     {
         bool win = waves.state == WaveManager.State.Victory;
-        if (!win && waves.state != WaveManager.State.Defeat) { endShownAt = -1f; return; }
+        if (!win) { endShownAt = -1f; return; } // 패배 화면은 EndingUI가 그린다
         if (endShownAt < 0) endShownAt = Time.unscaledTime;
         float a = Mathf.Clamp01((Time.unscaledTime - endShownAt) / 0.5f);
 

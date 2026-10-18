@@ -35,6 +35,7 @@ public class WaveManager : MonoBehaviour
     }
 
     public enum State { Waiting, Spawning, Fighting, Intermission, Victory, Defeat }
+    public enum DefeatReason { PlayerDead, CoreDestroyed } // 목숨을 모두 잃음 / 코어 파괴
 
     public SpawnGate gateA;
     public SpawnGate gateB;
@@ -56,6 +57,7 @@ public class WaveManager : MonoBehaviour
     public State state { get; private set; } = State.Waiting;
     public int currentWave { get; private set; } // 1부터 시작, 0은 아직 시작 전
     public float intermissionLeft { get; private set; }
+    public DefeatReason defeatReason { get; private set; }
 
     public event System.Action<int> onWaveStart;
     public event System.Action<int> onWaveCleared;
@@ -67,6 +69,12 @@ public class WaveManager : MonoBehaviour
 
     void Awake()
     {
+        if (GameFlow.BackgroundOnly)
+        {
+            // 인트로 배경: 이 오브젝트의 웨이브, 상점, HUD 스크립트를 모두 끈다
+            foreach (var b in GetComponents<MonoBehaviour>()) b.enabled = false;
+            return;
+        }
         foreach (var p in enemyPrefabs)
         {
             var info = p != null ? p.GetComponent<TankInfo>() : null;
@@ -80,11 +88,15 @@ public class WaveManager : MonoBehaviour
 
     void Start()
     {
-        if (coreHealth != null) coreHealth.onDeath += _ => Defeat();
+        if (coreHealth != null) coreHealth.onDeath += _ => Defeat(DefeatReason.CoreDestroyed);
         // 웨이브, 골드, 체력, 아이템 효과를 보여주는 HUD
         var hud = GetComponent<GameHUD>();
         if (hud == null) hud = gameObject.AddComponent<GameHUD>();
         hud.waves = this;
+        // 패배 화면(어두워지는 연출, 안내 문구, 버튼)
+        var ending = GetComponent<EndingUI>();
+        if (ending == null) ending = gameObject.AddComponent<EndingUI>();
+        ending.waves = this;
         if (autoStart) StartWaves();
     }
 
@@ -208,10 +220,11 @@ public class WaveManager : MonoBehaviour
         };
     }
 
-    public void Defeat()
+    public void Defeat(DefeatReason reason)
     {
         if (state == State.Defeat || state == State.Victory) return;
         state = State.Defeat;
+        defeatReason = reason;
         onDefeat?.Invoke();
     }
 

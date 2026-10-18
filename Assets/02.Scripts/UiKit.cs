@@ -117,6 +117,18 @@ public static class UiKit
         return Style(size, TextAnchor.MiddleLeft, fs).CalcSize(new GUIContent(text)).x;
     }
 
+    // 둥근 버튼. 마우스를 올리면 밝아진다. 눌리면 true
+    public static bool Button(Rect r, string text, int size)
+    {
+        float s = S;
+        bool hover = r.Contains(Event.current.mousePosition);
+        Round(new Rect(r.x + 2 * s, r.y + 4 * s, r.width, r.height), new Color(0, 0, 0, 0.4f), 16 * s);
+        Round(r, hover ? new Color(0.30f, 0.62f, 0.85f, 0.95f) : new Color(0.10f, 0.20f, 0.32f, 0.92f), 16 * s);
+        Outline(r, hover ? Color.white : PanelEdge, Mathf.Max(1.5f, 2f * s), 16 * s);
+        Label(r, text, size, Color.white);
+        return GUI.Button(r, GUIContent.none, GUIStyle.none);
+    }
+
     // 조준선: 흰 고리 + 점 + 네 방향 눈금, 검은 외곽선으로 어떤 배경에서도 보인다
     public static void Crosshair(float cx, float cy)
     {

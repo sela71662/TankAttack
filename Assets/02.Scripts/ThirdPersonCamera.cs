@@ -25,6 +25,11 @@ public class ThirdPersonCamera : MonoBehaviour
     bool started;     // 플레이어가 움직이기 시작해서 카메라가 따라가는 중인가
     Vector3 startPos; // 처음 위치를 잡았을 때의 플레이어 위치
 
+    void Awake()
+    {
+        if (GameFlow.BackgroundOnly) enabled = false; // 인트로 배경에서는 커서를 잠그지 않는다
+    }
+
     void OnEnable()
     {
         LockCursor(true);
@@ -84,7 +89,7 @@ public class ThirdPersonCamera : MonoBehaviour
                 pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * sensitivityY, minPitch, maxPitch);
             }
         }
-        else if (Input.GetMouseButtonDown(0))
+        else if (Input.GetMouseButtonDown(0) && !EndingUI.Active) // 패배 화면의 버튼을 누를 때는 커서를 다시 잠그지 않는다
         {
             LockCursor(true);
         }

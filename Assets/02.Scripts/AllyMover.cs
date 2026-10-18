@@ -56,6 +56,7 @@ public class AllyMover : MonoBehaviour
     static bool Alive(SpawnGate g) => g != null && !g.IsDestroyed;
 
     static int spawnCounter;           // 생성 순서대로 선호 게이트를 번갈아 준다
+    public static void ResetStatics() { spawnCounter = 0; } // 씬을 다시 불러올 때 호출한다
     int gatePref;
 
     void Awake()

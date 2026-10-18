@@ -10,7 +10,7 @@ public class SpawnGate : MonoBehaviour
     public Transform approach;  // 지상 탱크가 코어로 접근할 때 NavMesh 위의 목표 지점
     public GameObject destroyEffect; // 파괴될 때 터지는 큰 폭발
     public float blastScale = 4.0f;  // 폭발 크기 배율. 100m 밖에서도 보이도록 크게
-    public float smokeScale = 3.0f;  // 연기 크기 배율
+    public float smokeScale = 10.0f; // 연기 크기 배율
     public GameObject smokeEffect;   // 파괴된 뒤 그 자리에 계속 피어오르는 연기 (Smoke01)
 
     // 게이트가 속한 팀은 항상 적 팀이다
@@ -68,7 +68,7 @@ public class SpawnGate : MonoBehaviour
     }
 
     // 파티클 크기까지 함께 키운다 (Transform scale은 Hierarchy 모드에서만 파티클 크기에 반영된다)
-    static void ScaleEffect(GameObject fx, float scale)
+    public static void ScaleEffect(GameObject fx, float scale)
     {
         foreach (var ps in fx.GetComponentsInChildren<ParticleSystem>())
         {

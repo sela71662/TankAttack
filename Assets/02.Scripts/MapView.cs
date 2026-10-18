@@ -17,6 +17,7 @@ public class MapView : MonoBehaviour
     {
         var go = new GameObject("MapView");
         go.AddComponent<MapView>();
+        DontDestroyOnLoad(go); // 인트로 -> 메인, 재시작처럼 씬이 바뀌어도 지도가 남는다
     }
 
     void Start()
@@ -48,6 +49,7 @@ public class MapView : MonoBehaviour
 
     void Update()
     {
+        if (GameFlow.InMenuScene) return; // 인트로에서는 지도를 열지 않는다
         if (Input.GetKeyDown(KeyCode.M))
         {
             IsOpen = !IsOpen;
