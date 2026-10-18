@@ -9,8 +9,6 @@ public class MapView : MonoBehaviour
     public float orthoSize = 140.0f;                             // 세로 절반 길이 (m)
 
     Camera mapCam;
-    GUIStyle label;
-    Texture2D white;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
@@ -33,13 +31,11 @@ public class MapView : MonoBehaviour
         mapCam.nearClipPlane = 1.0f;
         mapCam.farClipPlane = 500.0f;
         mapCam.clearFlags = CameraClearFlags.SolidColor;
-        mapCam.backgroundColor = new Color(0.05f, 0.08f, 0.12f);
+        mapCam.backgroundColor = new Color(0.04f, 0.06f, 0.05f); // MenuKit.Ink 계열의 어두운 색
         mapCam.depth = 100.0f; // 메인 카메라 위에 그린다
         mapCam.enabled = false;
         var listener = go.GetComponent<AudioListener>();
         if (listener != null) Destroy(listener);
-
-        white = Texture2D.whiteTexture;
     }
 
     void OnDestroy()
@@ -57,20 +53,24 @@ public class MapView : MonoBehaviour
         }
     }
 
-    void Box(Vector2 p, float size, Color fill, Color border)
+    // 팀 마커: 테두리 있는 사각형. size는 1080p 기준 픽셀
+    static void Marker(Vector2 p, float size, Color fill, Color border)
     {
-        float s = size * Screen.height / 1080.0f;
-        float b = Mathf.Max(1.0f, s * 0.2f);
-        GUI.color = border;
-        GUI.DrawTexture(new Rect(p.x - s * 0.5f - b, p.y - s * 0.5f - b, s + b * 2, s + b * 2), white);
-        GUI.color = fill;
-        GUI.DrawTexture(new Rect(p.x - s * 0.5f, p.y - s * 0.5f, s, s), white);
+        float s = size * UiKit.S;
+        float b = Mathf.Max(1.5f, s * 0.18f);
+        MenuKit.Fill(new Rect(p.x - s * 0.5f - b, p.y - s * 0.5f - b, s + b * 2, s + b * 2), border);
+        MenuKit.Fill(new Rect(p.x - s * 0.5f, p.y - s * 0.5f, s, s), fill);
     }
 
     void OnGUI()
     {
         if (!IsOpen || mapCam == null) return;
         if (Event.current.type != EventType.Repaint) return;
+
+        MenuKit.A = 1f;
+        GUI.color = Color.white;
+        float S = UiKit.S;
+        Color allyColor = MenuKit.Amber, enemyColor = MenuKit.Alert;
 
         var player = PlayerTankController.Instance;
         foreach (var t in TeamMember.All)
@@ -79,23 +79,44 @@ public class MapView : MonoBehaviour
             Vector3 sp = mapCam.WorldToScreenPoint(t.transform.position);
             if (sp.z <= 0.0f) continue;
             var p = new Vector2(sp.x, Screen.height - sp.y);
-            bool ally = TeamConfig.IsAlly(t.team);
-            Color c = ally ? new Color(1.0f, 0.85f, 0.1f) : new Color(1.0f, 0.15f, 0.1f);
+            Color c = TeamConfig.IsAlly(t.team) ? allyColor : enemyColor;
 
-            if (t.isStructure) Box(p, 22.0f, c, Color.black);
-            else if (player != null && t.gameObject == player.gameObject) Box(p, 16.0f, c, Color.white);
-            else Box(p, 11.0f, c, Color.black);
+            if (t.isStructure)
+            {
+                Marker(p, 20.0f, c, MenuKit.Ink);
+                float h = 17.0f * S; // 건물은 모서리 괄호로 감싼다
+                MenuKit.Brackets(new Rect(p.x - h, p.y - h, h * 2, h * 2), c, 8, 2);
+            }
+            else if (player != null && t.gameObject == player.gameObject)
+            {
+                Marker(p, 16.0f, c, MenuKit.Paper);
+                float h = 14.0f * S;
+                MenuKit.Brackets(new Rect(p.x - h, p.y - h, h * 2, h * 2), MenuKit.Paper, 6, 2);
+            }
+            else Marker(p, 11.0f, c, MenuKit.Ink);
         }
-        GUI.color = Color.white;
 
-        if (label == null)
-        {
-            label = new GUIStyle(GUI.skin.label);
-            label.alignment = TextAnchor.UpperCenter;
-            label.fontStyle = FontStyle.Bold;
-            label.normal.textColor = Color.white;
-        }
-        label.fontSize = Mathf.RoundToInt(28.0f * Screen.height / 1080.0f);
-        GUI.Label(new Rect(0, 10.0f * Screen.height / 1080.0f, Screen.width, 50.0f * Screen.height / 1080.0f), "전체 맵   (M: 닫기)", label);
+        // 위쪽 왼쪽: 제목과 범례, 아래: 닫기 안내. 지도 위에서 읽히도록 어두운 판 위에 둔다
+        float x = 60 * S, y = 54 * S;
+        var legend = new Rect(x - 18 * S, y - 22 * S, 330 * S, 190 * S);
+        MenuKit.HudPanel(legend, MenuKit.Amber);
+        MenuKit.Tag(x, y, "TACTICAL MAP", MenuKit.Amber);
+        MenuKit.Text(new Rect(x, y + 22 * S, 280 * S, 28 * S), "전체 맵", 20, MenuKit.Paper);
+        LegendRow(x, y + 62 * S, allyColor, MenuKit.Ink, "ALLY", "아군");
+        LegendRow(x, y + 94 * S, enemyColor, MenuKit.Ink, "ENEMY", "적");
+        LegendRow(x, y + 126 * S, allyColor, MenuKit.Paper, "YOU", "플레이어");
+
+        float hy = Screen.height - 90 * S;
+        MenuKit.KeyCap(new Rect(60 * S, hy, 44 * S, 36 * S), "M");
+        MenuKit.Text(new Rect(116 * S, hy, 200 * S, 36 * S), "닫기", 20, MenuKit.Dim);
+        MenuKit.ScreenFrame();
+    }
+
+    static void LegendRow(float x, float y, Color fill, Color border, string label, string korean)
+    {
+        float S = UiKit.S;
+        Marker(new Vector2(x + 10 * S, y + 14 * S), 14.0f, fill, border);
+        MenuKit.Text(new Rect(x + 34 * S, y, 120 * S, 28 * S), MenuKit.Spaced(label), 16, MenuKit.Paper, MenuKit.Medium);
+        MenuKit.Text(new Rect(x + 150 * S, y, 150 * S, 28 * S), korean, 16, MenuKit.Dim);
     }
 }

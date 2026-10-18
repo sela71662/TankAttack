@@ -1,6 +1,7 @@
 using UnityEngine;
 
-// 화면 위쪽 가운데에 잠깐 뜨는 큰 알림 (게이트 파괴 등). 씬에 따로 놓지 않아도 처음 Show 할 때 스스로 생긴다
+// 화면 위쪽 가운데에 잠깐 뜨는 큰 알림 (게이트 파괴 등). 씬에 따로 놓지 않아도 처음 Show 할 때 스스로 생긴다.
+// MenuKit의 밀리터리 HUD 스타일: 각진 패널, 위쪽 색 띠, 굵은 영문 제목
 public class NoticeUI : MonoBehaviour
 {
     static NoticeUI instance;
@@ -18,7 +19,7 @@ public class NoticeUI : MonoBehaviour
             var go = new GameObject("NoticeUI");
             instance = go.AddComponent<NoticeUI>();
         }
-        instance.text = text;
+        instance.text = text.ToUpperInvariant();
         instance.sub = sub;
         instance.color = color;
         instance.startTime = Time.unscaledTime;
@@ -34,18 +35,19 @@ public class NoticeUI : MonoBehaviour
         float s = UiKit.S;
         float slide = (1f - Mathf.Clamp01(t / 0.25f)) * -24f * s;
 
-        float tw = Mathf.Max(UiKit.TextWidth(text, 44), string.IsNullOrEmpty(sub) ? 0 : UiKit.TextWidth(sub, 24));
-        float w = tw + 120 * s, h = string.IsNullOrEmpty(sub) ? 84 * s : 124 * s;
+        float tw = Mathf.Max(MenuKit.TextWidth(text, 48, MenuKit.Bold), string.IsNullOrEmpty(sub) ? 0 : MenuKit.TextWidth(sub, 30, MenuKit.Bold));
+        float w = tw + 140 * s, h = string.IsNullOrEmpty(sub) ? 86 * s : 130 * s;
         var r = new Rect((Screen.width - w) * 0.5f, Screen.height * 0.16f + slide, w, h);
 
-        var old = GUI.color;
-        GUI.color = new Color(1, 1, 1, alpha);
-        UiKit.Panel(r, 18, new Color(0.04f, 0.06f, 0.10f, 0.88f));
-        UiKit.Round(new Rect(r.x + 18 * s, r.y + 8 * s, r.width - 36 * s, 4 * s), new Color(color.r, color.g, color.b, alpha), 2 * s);
-        GUI.color = old;
+        MenuKit.A = alpha;
+        MenuKit.HudPanel(r, color);
+        MenuKit.Fill(new Rect(r.x, r.y, r.width, 4 * s), color); // 위쪽 색 띠
+        MenuKit.Fill(new Rect(r.x - 28 * s, r.y + h * 0.5f, 22 * s, 3 * s), color); // 양옆 짧은 선
+        MenuKit.Fill(new Rect(r.xMax + 6 * s, r.y + h * 0.5f, 22 * s, 3 * s), color);
 
-        UiKit.Label(new Rect(r.x, r.y + 14 * s, r.width, 62 * s), text, 44, new Color(color.r, color.g, color.b, alpha));
+        MenuKit.Text(new Rect(r.x, r.y + 12 * s, r.width, 62 * s), text, 48, color, MenuKit.Bold, TextAnchor.MiddleCenter);
         if (!string.IsNullOrEmpty(sub))
-            UiKit.Label(new Rect(r.x, r.y + 74 * s, r.width, 36 * s), sub, 24, new Color(1f, 1f, 1f, alpha * 0.9f));
+            MenuKit.Text(new Rect(r.x, r.y + 76 * s, r.width, 40 * s), sub, 30, MenuKit.Paper, MenuKit.Bold, TextAnchor.MiddleCenter);
+        MenuKit.A = 1f;
     }
 }

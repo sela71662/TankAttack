@@ -1,12 +1,15 @@
 using UnityEngine;
 
 // 엔딩 씬 화면. GameFlow.LastEnd의 결과에 따라 승리 / 코어 파괴 / 목숨 소진 화면을 보여 준다.
-// 배경은 MapBackdrop이 불러온 메인 씬이다. 코어 파괴는 그 위에 폭발과 연기를 새로 재생한다
+// 배경은 MapBackdrop이 불러온 메인 씬이다. 코어 파괴는 그 위에 폭발과 연기를 새로 재생한다.
+// 레이아웃은 인트로와 같은 MenuKit의 밀리터리 HUD 스타일: 왼쪽에 결과, 통계, 메뉴
 public class EndingScreen : MonoBehaviour
 {
     float openedAt;
     MapBackdrop backdrop;
     GameFlow.EndStats stats;
+    MenuList menu;
+    readonly ScreenFader fader = new ScreenFader();
 
     void Awake()
     {
@@ -28,6 +31,9 @@ public class EndingScreen : MonoBehaviour
                 break;
         }
         backdrop.onReady += OnMapReady;
+
+        bool dead = stats.result == GameFlow.EndResult.PlayerDead;
+        menu = new MenuList(new[] { dead ? "RESTART" : "RETRY", "MAIN MENU" }, new[] { "다시 시작", "메인 메뉴" });
     }
 
     void Start()
@@ -71,62 +77,77 @@ public class EndingScreen : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)) GameFlow.Restart();
-        if (Input.GetKeyDown(KeyCode.Escape)) GameFlow.ToIntro();
+        fader.Tick();
+        if (fader.Busy) return;
+        if (Input.GetKeyDown(KeyCode.Escape)) { fader.Go(GameFlow.ToIntro); return; }
+        Activate(menu.HandleKeys());
+    }
+
+    void Activate(int index)
+    {
+        if (index == 0) fader.Go(GameFlow.Restart);
+        else if (index == 1) fader.Go(GameFlow.ToIntro);
     }
 
     void OnGUI()
     {
         float s = UiKit.S;
-        float cx = Screen.width * 0.5f;
+        float W = Screen.width, H = Screen.height;
         bool win = stats.result == GameFlow.EndResult.Victory;
         bool core = stats.result == GameFlow.EndResult.CoreDestroyed;
+        Color accent = win ? MenuKit.Amber : MenuKit.Alert;
 
-        // 맵을 불러오기 전에는 가린 채, 불러온 뒤 결과 색의 막으로 서서히 바뀐다
-        Color cover = win ? new Color(0.02f, 0.04f, 0.08f, 0.30f)
-                    : core ? new Color(0.25f, 0.02f, 0.02f, 0.45f)
-                    : new Color(0f, 0f, 0f, 0.78f);
-        float k = backdrop.Ready ? Mathf.Clamp01((Time.unscaledTime - backdrop.ReadyAt) / 1.5f) : 0f;
-        UiKit.Round(new Rect(0, 0, Screen.width, Screen.height),
-                    new Color(Mathf.Lerp(0f, cover.r, k), Mathf.Lerp(0f, cover.g, k), Mathf.Lerp(0f, cover.b, k), Mathf.Lerp(1f, cover.a, k)), 0);
+        float t = Time.unscaledTime - openedAt;
+        MenuKit.A = Mathf.Clamp01(t / 0.8f);
 
-        float a = Mathf.Clamp01((Time.unscaledTime - openedAt) / 1.0f);
-        string title = win ? "VICTORY" : core ? "CORE DESTROYED" : "YOU DIED";
+        // 맵을 불러오기 전에는 검은 화면, 불러온 뒤에는 서서히 걷히는 막
+        float black = backdrop.Ready ? 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((Time.unscaledTime - backdrop.ReadyAt) / 1.4f)) : 1f;
+
+        MenuKit.Shade(win ? 0.88f : 0.94f, win ? 0.45f : 0.65f);
+        if (core) MenuKit.Wash(new Color(0.30f, 0.02f, 0.02f, 0.22f)); // 코어 파괴: 붉은 기운
+        else if (!win) MenuKit.Wash(new Color(0f, 0f, 0f, 0.35f));    // 목숨 소진: 어둡게
+        MenuKit.ScreenFrame();
+
+        float x = 130 * s;
+        MenuKit.VLine(x - 34 * s, 78 * s, H - 156 * s, MenuKit.Line);
+
+        // 결과
+        MenuKit.Tag(x, 84 * s, "MISSION REPORT", accent);
+        string title = win ? "VICTORY" : core ? "CORE LOST" : "YOU DIED";
         string sub = win ? "모든 게이트를 파괴하고 코어를 지켜냈습니다"
                    : core ? "코어가 파괴되었습니다"
                    : "플레이어가 모든 목숨을 잃었습니다";
-        Color accent = win ? UiKit.Gold : UiKit.Danger;
+        MenuKit.Text(new Rect(x - 5 * s, H * 0.12f, W, 130 * s), title, 112, accent, MenuKit.TitleFont);
+        MenuKit.Fill(new Rect(x, H * 0.12f + 142 * s, 96 * s, 4 * s), accent);
+        MenuKit.Text(new Rect(x, H * 0.12f + 158 * s, 1200 * s, 36 * s), sub, 24, MenuKit.Paper);
 
-        float y = Screen.height * 0.10f;
-        UiKit.Label(new Rect(0, y, Screen.width, 110 * s), title, 88, new Color(accent.r, accent.g, accent.b, a));
-        UiKit.Label(new Rect(0, y + 110 * s, Screen.width, 44 * s), sub, 26, new Color(1, 1, 1, a));
-        y += 190 * s;
-
-        DrawStats(new Rect(cx - 220 * s, y, 440 * s, 230 * s), a);
-        y += 270 * s;
-
-        var old = GUI.color;
-        GUI.color = new Color(1, 1, 1, a);
-        if (UiKit.Button(new Rect(cx - 250 * s, y, 230 * s, 64 * s), stats.result == GameFlow.EndResult.PlayerDead ? "RESTART" : "RETRY", 28)) GameFlow.Restart();
-        if (UiKit.Button(new Rect(cx + 20 * s, y, 230 * s, 64 * s), "MAIN MENU", 28)) GameFlow.ToIntro();
-        GUI.color = old;
-    }
-
-    void DrawStats(Rect r, float a)
-    {
-        float s = UiKit.S;
-        var old = GUI.color;
-        GUI.color = new Color(1, 1, 1, a);
-        UiKit.Panel(r, 16);
-        GUI.color = old;
-
+        // 통계: 한 줄씩 차례로 나타나고 숫자가 올라간다
         string[] names = { "도달 웨이브", "처치한 적", "보유 골드", "파괴한 게이트" };
-        string[] values = { $"{stats.wave} / {stats.totalWaves}", $"{stats.kills}", $"{stats.gold}", $"{stats.gates} / 2" };
+        string[] tags = { "WAVE", "KILLS", "GOLD", "GATES" };
+        int[] values = { stats.wave, stats.kills, stats.gold, stats.gates };
+        string[] tails = { " / " + stats.totalWaves, "", "", " / 2" };
+        float sy = H * 0.12f + 232 * s;
+        float w = 560 * s, rowH = 58 * s;
         for (int i = 0; i < names.Length; i++)
         {
-            var row = new Rect(r.x + 28 * s, r.y + 18 * s + i * 50 * s, r.width - 56 * s, 44 * s);
-            UiKit.Label(row, names[i], 22, new Color(UiKit.Dim.r, UiKit.Dim.g, UiKit.Dim.b, a), TextAnchor.MiddleLeft);
-            UiKit.Label(row, values[i], 26, new Color(1, 1, 1, a), TextAnchor.MiddleRight);
+            float k = Mathf.Clamp01((t - 0.5f - i * 0.15f) / 0.5f);
+            float ek = 1f - (1f - k) * (1f - k);
+            float prev = MenuKit.A;
+            MenuKit.A = prev * k;
+
+            float ry = sy + i * rowH;
+            MenuKit.Text(new Rect(x + 4 * s, ry, 160 * s, rowH - 6 * s), MenuKit.Spaced(tags[i]), 16, MenuKit.Dim, MenuKit.Medium);
+            MenuKit.Text(new Rect(x + 130 * s, ry, 260 * s, rowH - 6 * s), names[i], 20, MenuKit.Dim);
+            MenuKit.Text(new Rect(x, ry, w - 6 * s, rowH - 6 * s), Mathf.RoundToInt(values[i] * ek) + tails[i], 38, MenuKit.Paper, MenuKit.Bold, TextAnchor.MiddleRight);
+            MenuKit.HLine(x, ry + rowH - 4 * s, w, MenuKit.Line);
+
+            MenuKit.A = prev;
         }
+
+        Activate(menu.Draw(new Rect(x, sy + names.Length * rowH + 40 * s, w, 74 * s * 2), 74 * s, !fader.Busy && t > 1.0f));
+
+        MenuKit.Text(new Rect(x, H - 92 * s, 900 * s, 30 * s), MenuKit.Spaced("W / S  MOVE     ENTER  SELECT     ESC  MENU"), 16, MenuKit.Dim, MenuKit.Medium);
+
+        MenuKit.Wash(new Color(0f, 0f, 0f, Mathf.Max(black, fader.Alpha)));
     }
 }

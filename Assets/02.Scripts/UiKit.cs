@@ -129,25 +129,45 @@ public static class UiKit
         return GUI.Button(r, GUIContent.none, GUIStyle.none);
     }
 
-    // 조준선: 흰 고리 + 점 + 네 방향 눈금, 검은 외곽선으로 어떤 배경에서도 보인다
+    // 조준선: 가운데 호박색 점 + 네 방향 눈금 + 네 모서리 괄호. 각진 밀리터리 스타일(MenuKit과 같은 색),
+    // 어두운 외곽선을 먼저 깔아 어떤 배경에서도 보인다. 점이 (cx, cy) 정중앙이라 조준 위치는 그대로다
     public static void Crosshair(float cx, float cy)
     {
         float s = S;
-        float ring = 11f * s, tick = 7f * s, gap = 5f * s, th = Mathf.Max(2f, 2f * s);
-        var shadow = new Color(0, 0, 0, 0.7f);
-        var white = new Color(1f, 1f, 1f, 0.95f);
+        float th = Mathf.Max(2f, 2f * s);        // 선 두께
+        float tick = 9f * s, gap = 6f * s;       // 눈금 길이, 중심에서 눈금까지 빈 거리
+        float box = 20f * s, arm = 7f * s;       // 모서리 괄호: 중심에서 모서리까지, 팔 길이
+        var shadow = new Color(0.035f, 0.045f, 0.04f, 0.85f);
+        var paper = new Color(0.90f, 0.92f, 0.86f, 0.95f);
+        var amber = new Color(1.00f, 0.70f, 0.14f, 1f);
 
         for (int pass = 0; pass < 2; pass++)
         {
-            Color c = pass == 0 ? shadow : white;
-            float o = pass == 0 ? th * 0.6f : 0f;   // 그림자 패스는 조금 더 두껍게
-            Outline(new Rect(cx - ring - o, cy - ring - o, (ring + o) * 2, (ring + o) * 2), c, th + o * 2, ring + o);
-            Round(new Rect(cx - 2f * s - o, cy - 2f * s - o, 4f * s + o * 2, 4f * s + o * 2), c, 4f * s);
-            float a = ring + gap;
-            Round(new Rect(cx - th * 0.5f - o, cy - a - tick - o, th + o * 2, tick + o * 2), c, 1f);
-            Round(new Rect(cx - th * 0.5f - o, cy + a - o, th + o * 2, tick + o * 2), c, 1f);
-            Round(new Rect(cx - a - tick - o, cy - th * 0.5f - o, tick + o * 2, th + o * 2), c, 1f);
-            Round(new Rect(cx + a - o, cy - th * 0.5f - o, tick + o * 2, th + o * 2), c, 1f);
+            Color line = pass == 0 ? shadow : paper;
+            Color dot = pass == 0 ? shadow : amber;
+            float o = pass == 0 ? th * 0.7f : 0f;   // 그림자 패스는 조금 더 두껍게
+
+            // 중심 점
+            float d = 3f * s;
+            Round(new Rect(cx - d * 0.5f - o, cy - d * 0.5f - o, d + o * 2, d + o * 2), dot, 0f);
+
+            // 네 방향 눈금
+            Round(new Rect(cx - th * 0.5f - o, cy - gap - tick - o, th + o * 2, tick + o * 2), line, 0f);
+            Round(new Rect(cx - th * 0.5f - o, cy + gap - o, th + o * 2, tick + o * 2), line, 0f);
+            Round(new Rect(cx - gap - tick - o, cy - th * 0.5f - o, tick + o * 2, th + o * 2), line, 0f);
+            Round(new Rect(cx + gap - o, cy - th * 0.5f - o, tick + o * 2, th + o * 2), line, 0f);
+
+            // 네 모서리 괄호 (ㄱ자)
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                for (int sy = -1; sy <= 1; sy += 2)
+                {
+                    float px = cx + sx * box, py = cy + sy * box;
+                    // 가로 팔: 모서리에서 중심 쪽으로, 세로 팔: 모서리에서 중심 쪽으로
+                    Round(new Rect(sx > 0 ? px - arm - o : px - th * 0.5f - o, py - th * 0.5f - o, arm + th * 0.5f + o * 2, th + o * 2), line, 0f);
+                    Round(new Rect(px - th * 0.5f - o, sy > 0 ? py - arm - o : py - th * 0.5f - o, th + o * 2, arm + th * 0.5f + o * 2), line, 0f);
+                }
+            }
         }
     }
 }
