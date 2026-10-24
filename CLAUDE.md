@@ -101,6 +101,15 @@ TankAttack is a Unity 6 third-person tank **defense game** (editor `6000.5.10f1`
   - `EndingUI` (on the WaveManager object, auto-added) only triggers the ending: on `onVictory` / `onDefeat` it waits (`victoryDelay` 4 s, `coreBlastDelay` 2.5 s with 0.3x slow motion and `FX_GateBlast` on the core, `playerDeadDelay` 1.5 s), fades the screen, stores the stats and calls `GameFlow.ToEnding`. The victory banner is still drawn by `GameHUD.DrawEndBanner`; defeat is shown only by the Ending scene.
   - `EndingScreen` (Ending scene) shows VICTORY (amber, camera radius 110), CORE LOST (red tint, core hidden, blast and smoke replayed at the core, radius 70) or YOU DIED (black tint, radius 130). Left-aligned layout: title, staggered stats rows with count-up numbers (wave, kills, gold, gates), then a `MenuList` with `RETRY`/`RESTART` and `MAIN MENU` (W/S or arrows, Enter/Space, Esc = main menu). `IntroUI` uses the same `MenuKit` style (menu START / CONTROLS / EXIT with a keycap controls panel). Both fade to black through `ScreenFader` before changing scene.
 
+## Project report (Figma Slides)
+
+- The course report ("기획 보고서") lives in Figma Slides: `https://www.figma.com/slides/cJbeZWQF3gYHLp3wBwrtQ3` (file key `cJbeZWQF3gYHLp3wBwrtQ3`). 17 slides, 1920x1080, built through `mcp__figma__use_figma` (load `skill://figma/figma-use/SKILL.md` and `figma-use-slides` via `ReadMcpResourceTool` first; there is no `figma-use` entry in the Skill tool).
+- Style copies `example.pdf` (repo root, untracked, the reference report): light-blue top band with a screw tab, white card, black 2 px strokes, yellow-green parallelogram behind titles, pastel cards (`lblue`, `lyel`, `pink`). Font is `Noto Sans KR` (Black/Bold/Medium/Regular); code uses `Roboto Mono` with a dark code box.
+- Slide order: 1 title, 2 contents, 3 overview, 4 Intro scene, 5 Ending scenes, 6 map/background, 7 player tank, 8 tank and shell table, 9 WAVE difficulty, 10 items, 11 extra features, 12 to 16 key code (turret yaw limit `TurretAimer.SnapTo`, homing `Projectile` Plasma, `ItemPickup`/`PlayerBuffs`, `WaveManager.Update` victory + `AllyUpgrades.AddKill`, `GameFlow`), 17 problems solved. Slide ids: `1:42`, `3:2` to `3:6`, `5:2` to `5:6`, `6:2` to `6:7`.
+- The report numbers come from the code (`WaveManager.FillDefaultWaves` counts are base values before `countMultiplier` 2; enemy HP x2 from W2). If wave contents, ranges or item buffs change, update slides 8, 9 and 10 to match.
+- Slide 4 and 6 hold dashed screenshot placeholders, and the cover has no name or student id. The user fills these in. The "lessons" text on slide 17 was written by Claude and should be replaced with the user's own words.
+- Building slides in Slides files: call `appendChild` before setting `x`/`y` (otherwise a (-240,-240) shift), use `figma.createSlide()`, and `getSlideGrid()` can lag behind newly created slides (look them up by id with `getNodeByIdAsync`).
+
 ## NavMesh (important)
 
 - The island terrain (`Cliff*` meshes) was lowered so the island is now roughly one level (y about -5.5); the old plateau/terrace split and the `ClimbLinks` object are gone. Props were re-snapped to the new surface.
