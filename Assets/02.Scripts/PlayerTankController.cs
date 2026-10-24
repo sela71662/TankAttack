@@ -6,8 +6,8 @@ public class PlayerTankController : MonoBehaviour
 {
     public static PlayerTankController Instance { get; private set; }
 
-    public float moveSpeed = 9.0f;
-    public float reverseSpeed = 5.0f;
+    public float moveSpeed = 13.0f;
+    public float reverseSpeed = 7.0f;
     public float turnSpeed = 100.0f; // 도/초
     public float gravity = -25.0f;
     public float speedScale = 1.0f; // 아이템 효과로 바뀌는 이동 속도 배율
