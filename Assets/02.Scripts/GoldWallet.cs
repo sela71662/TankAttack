@@ -57,6 +57,7 @@ public static class GoldWallet
     }
 
     public const int gateReward = 150; // 적 스폰 게이트를 파괴했을 때
+    public const int waveStartGold = 200; // 웨이브가 시작할 때마다 지급 (클리어 보너스와 별도)
 
     public const int repairCost = 100;
     public const float repairRatio = 0.25f; // 코어 최대 체력의 이 비율만큼 회복

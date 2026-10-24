@@ -134,6 +134,7 @@ public class WaveManager : MonoBehaviour
             currentWave = i + 1;
             state = State.Spawning;
             onWaveStart?.Invoke(currentWave);
+            GoldWallet.Add(GoldWallet.waveStartGold); // 웨이브 시작마다 상점용 골드 지급
             if (allySpawner != null) allySpawner.SpawnBatch(ScaledAllies(waves[i].allies));
             yield return SpawnWave(waves[i], 1.0f + speedGrowthPerWave * i);
 
@@ -235,19 +236,19 @@ public class WaveManager : MonoBehaviour
         // W1: 플레이어 혼자 Gate A의 Original 2대를 상대한다 (조작 연습)
         waves.Add(MakeWave("조작 연습", 1f, null,
             new[] { new Entry(TankKind.Original, 2, 0) }));
-        // 이후 웨이브: 아군은 건물에서 자동 소환(누적), 적은 양쪽 게이트에서 나온다. 적 체력은 2배.
-        // 수와 체력은 골드 보상을 보며 조절한다
+        // 이후 웨이브: 적은 양쪽 게이트에서 나온다. 적 체력은 2배.
+        // 자동 소환 아군은 W2의 초소 Heavy뿐이고, 나머지 아군은 플레이어가 상점에서 산다
         waves.Add(MakeWave("첫 방어선", enemyHpScale,
-            new[] { new AllyEntry(TankKind.Original, 1), new AllyEntry(TankKind.Heavy, 2) }, // 처음 두 Heavy는 두 다리 옆 자리를 지킨다
+            new[] { new AllyEntry(TankKind.Heavy, 1) }, // countMultiplier 2배로 2대, 두 다리 옆 자리를 지킨다
             new[] { new Entry(TankKind.Original, 2, 2), new Entry(TankKind.Heavy, 1, 0) }));
         waves.Add(MakeWave("다방향 압박", enemyHpScale,
-            new[] { new AllyEntry(TankKind.Original, 2), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1) },
+            null,
             new[] { new Entry(TankKind.Original, 3, 2), new Entry(TankKind.Heavy, 1, 1), new Entry(TankKind.Light, 0, 1) }));
         waves.Add(MakeWave("공중 위협", enemyHpScale,
-            new[] { new AllyEntry(TankKind.Original, 3), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1) },
+            null,
             new[] { new Entry(TankKind.Original, 4, 4), new Entry(TankKind.Heavy, 2, 1), new Entry(TankKind.Light, 1, 2), new Entry(TankKind.UFO, 1, 1) }));
         waves.Add(MakeWave("총력전", enemyHpScale,
-            new[] { new AllyEntry(TankKind.Original, 3), new AllyEntry(TankKind.Heavy, 1), new AllyEntry(TankKind.Light, 1), new AllyEntry(TankKind.UFO, 1), new AllyEntry(TankKind.MegaBall, 1) },
+            null,
             new[] { new Entry(TankKind.Original, 4, 4), new Entry(TankKind.Heavy, 2, 1), new Entry(TankKind.Light, 1, 2), new Entry(TankKind.UFO, 1, 0), new Entry(TankKind.MegaBall, 0, 1) }));
     }
 
